@@ -2,7 +2,20 @@
 RapidSMS HTTP Router
 ====================
 
-aImplements http endpoints to allow for the RapidSMS 'routing' process to be done in the HTTP thread.  This is a very rough first cut held together with bailing wire.
+Implements http endpoints to allow for the RapidSMS 'routing' process to be done in the HTTP thread.  This is a very rough first cut held together with bailing wire.
+
+Built by Nyaruka: http://www.nyaruka.com/
+
+Caveats
+-------
+
+Since this obviously does things differently, some things break.  Specifically the following apps will no longer work and should be removed from your ``INSTALLED_APPS`` and ``RAPIDSMS_TABS``:
+
+      rapidsms.contrib.messagelog
+      rapidsms.contrib.httptester
+      rapidsms.contrib.ajax
+
+The HTTP Router app replaces most of the functionality provided by these packages.  Specifically all messages passing through the HTTP router will be logged automatically and it provides a web interface for viewing and submitting new messages.
 
 Installation
 ------------
@@ -15,8 +28,6 @@ Put ``rapidsms_httprouter`` in your path, then add it to your ``INSTALLED_APPS``
       ..
       "rapidsms_httprouter"
     ]
-
-Note that because of how it works, the HTTP router is /not/ compatibile with either the ajax or httptester apps, you will need to remove these.  It also supercedes the models in ``messaging`` and provides its own ``messagelog`` functionality, so you may want to remove those apps as well.
 
 If you want to use the included console and http tester, add it as a tab::
 
