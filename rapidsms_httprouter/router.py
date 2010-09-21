@@ -183,6 +183,10 @@ class HttpRouter(object, LoggerMixin):
         if we fail, then we just add it to our outgoing queue.
         """
 
+        if not getattr(settings, 'ROUTER_URL', None):
+            print "No ROUTER_URL set in settings.py, queuing message for later delivery."
+            return
+
         params = {
             'backend': msg.connection.backend,
             'recipient': msg.connection.identity,
@@ -194,14 +198,14 @@ class HttpRouter(object, LoggerMixin):
             response = urlopen(settings.ROUTER_URL + urlencode(params))
 
             if response.getcode() == 200:
-                print "message: %s sent: " % msg.id
+                self.info("Message: %s sent: " % msg.id)
             else:
                 self.outgoing.append(msg)
-                print "message not sent, got status: %s .. queued for later delivery." % response.getcode()
+                self.error("Message not sent, got status: %s .. queued for later delivery." % response.getcode())
 
         except Exception as e:
             self.outgoing.append(msg)
-            print "message not sent: %s .. queued for later delivery." % str(e)
+            self.error("Message not sent: %s .. queued for later delivery." % str(e))
 
     def add_app(self, module_name):
         """
