@@ -9,7 +9,7 @@ Built by Nyaruka: http://www.nyaruka.com/
 Caveats
 -------
 
-Since this obviously does things differently, some things break.  Specifically the following apps will no longer work and should be removed from your ``INSTALLED_APPS`` and ``RAPIDSMS_TABS``:
+Since this obviously does things differently, some things break.  Specifically the following apps will no longer work and should be removed from your ``INSTALLED_APPS`` and ``RAPIDSMS_TABS``::
 
       rapidsms.contrib.messagelog
       rapidsms.contrib.httptester
@@ -49,7 +49,7 @@ The HTTP router provides the following endpoints:
 Receive
 ~~~~~~~~
 
-Messages can be handled and put through the router process using the URL, the result is json:
+Messages can be handled and put through the router process using the URL, the result is json::
     
     /router/receive?backend=<backend name>&sender=<sender number>&message=<message text>
 
@@ -57,7 +57,7 @@ Messages can be handled and put through the router process using the URL, the re
 Outbox
 ~~~~~~~
 
-You can see any pending messages which need to be sent using the URL, the result is json:
+You can see any pending messages which need to be sent using the URL, the result is json::
 
     /router/outbox
 
@@ -65,7 +65,7 @@ You can see any pending messages which need to be sent using the URL, the result
 Delivered
 ~~~~~~~~~~
 
-You can mark a message as sent, or delivered usign the URL:
+You can mark a message as sent, or delivered usign the URL::
 
     /router/delivered?message_id=<message id>
 
