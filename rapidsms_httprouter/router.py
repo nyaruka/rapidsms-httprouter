@@ -136,7 +136,8 @@ class HttpRouter(object, LoggerMixin):
         
     def handle_outgoing(self, msg, source=None):
         """
-        Sends out the passed in message.
+        Passes the message through the appropriate outgoing steps for all our apps,
+        then sends it off if it wasn't cancelled.
         """
         
         # first things first, log it (TODO, should this be elsewhere?)
@@ -224,6 +225,7 @@ class HttpRouter(object, LoggerMixin):
     def start(self):
         """
         Initializes our router.
+        TODO: this happens in the HTTP thread on the first call, that could be bad.
         """
 
         # add all our apps
@@ -241,7 +243,7 @@ class HttpRouter(object, LoggerMixin):
         # mark ourselves as started
         self.started = True
         
-# we'll get init on the first around
+# we'll get started when we first get used
 http_router = HttpRouter()
 http_router_lock = Lock()
 
