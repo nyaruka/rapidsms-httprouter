@@ -88,6 +88,8 @@ class HttpRouter(object, LoggerMixin):
                         handled = func(msg)
 
                     except Exception, err:
+                        import traceback
+                        traceback.print_exc(err)
                         app.exception()
 
                     # during the _filter_ phase, an app can return True
@@ -214,7 +216,11 @@ class HttpRouter(object, LoggerMixin):
         the list of apps to be notified of incoming messages. Return the
         app instance.
         """
-        cls = AppBase.find(module_name)
+        try:
+            cls = AppBase.find(module_name)
+        except:
+            cls = None
+
         if cls is None: return None
 
         app = cls(self)
@@ -229,7 +235,7 @@ class HttpRouter(object, LoggerMixin):
         """
 
         # add all our apps
-        for app_name in settings.INSTALLED_APPS:
+        for app_name in settings.SMS_APPS:
             self.add_app(app_name)
 
         # start all our apps
