@@ -135,20 +135,27 @@ class HttpRouter(object, LoggerMixin):
         msg.processed = True
 
         return db_message
-        
+
+
+    def add_outgoing(self, connection, text, source):
+        """
+        Adds a message to our outgoing queue, this is a non-blocking action
+        """
+        db_message = Message.objects.create(connection=connection
+                                            text=text,
+                                            direction='O',
+                                            status='Q',
+                                            in_response_to=source)
+        return db_message
+                
     def handle_outgoing(self, msg, source=None):
         """
         Passes the message through the appropriate outgoing steps for all our apps,
         then sends it off if it wasn't cancelled.
         """
         
-        # first things first, log it (TODO, should this be elsewhere?)
-        db_message = Message.objects.create(connection=msg.connection,
-                                            text=msg.text,
-                                            direction='O',
-                                            status='Q',
-                                            in_response_to=source)
-
+        # first things first, add it to our db/queue
+        db_message = self.add_outgoing(msg.connection, msg.text, source)
         self.info("Outgoing (%s): %s" % (msg.connection, msg.text))
 
         for phase in self.outgoing_phases:
