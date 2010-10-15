@@ -141,7 +141,7 @@ class HttpRouter(object, LoggerMixin):
         """
         Adds a message to our outgoing queue, this is a non-blocking action
         """
-        db_message = Message.objects.create(connection=connection
+        db_message = Message.objects.create(connection=connection,
                                             text=text,
                                             direction='O',
                                             status='Q',
