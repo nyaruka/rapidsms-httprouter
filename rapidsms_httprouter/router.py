@@ -137,7 +137,7 @@ class HttpRouter(object, LoggerMixin):
         return db_message
 
 
-    def add_outgoing(self, connection, text, source):
+    def add_outgoing(self, connection, text, source=None):
         """
         Adds a message to our outgoing queue, this is a non-blocking action
         """
@@ -146,6 +146,7 @@ class HttpRouter(object, LoggerMixin):
                                             direction='O',
                                             status='Q',
                                             in_response_to=source)
+        self.outgoing.append(db_message)
         return db_message
                 
     def handle_outgoing(self, msg, source=None):
