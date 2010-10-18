@@ -142,7 +142,7 @@ class HttpRouter(object, LoggerMixin):
         db_message = Message.objects.create(connection=connection,
                                             text=text,
                                             direction='O',
-                                            status='Q',
+                                            status=status,
                                             in_response_to=source)
         return db_message
                 
