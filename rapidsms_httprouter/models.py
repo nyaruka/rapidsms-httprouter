@@ -10,6 +10,8 @@ STATUS_CHOICES = (
     ("R", "Received"),
     ("H", "Handled"),
 
+    ("P", "Processing"),
+
     ("Q", "Queued"),
     ("S", "Sent"),
 

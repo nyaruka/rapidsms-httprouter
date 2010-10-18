@@ -48,7 +48,7 @@ def outbox(request):
     """
     response = {}
     messages = []
-    for message in get_router().outgoing:
+    for message in Message.objects.filter(status='Q'):
         messages.append(message.as_json())
 
     response['outbox'] = messages

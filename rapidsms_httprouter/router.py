@@ -23,8 +23,6 @@ class HttpRouter(object, LoggerMixin):
         # the apps we'll run through
         self.apps = []
 
-        self.outgoing = None
-
         # we need to be started
         self.started = False
 
@@ -137,7 +135,7 @@ class HttpRouter(object, LoggerMixin):
         return db_message
 
 
-    def add_outgoing(self, connection, text, source=None):
+    def add_outgoing(self, connection, text, source=None, status='Q'):
         """
         Adds a message to our outgoing queue, this is a non-blocking action
         """
@@ -146,7 +144,6 @@ class HttpRouter(object, LoggerMixin):
                                             direction='O',
                                             status='Q',
                                             in_response_to=source)
-        self.outgoing.append(db_message)
         return db_message
                 
     def handle_outgoing(self, msg, source=None):
@@ -156,7 +153,7 @@ class HttpRouter(object, LoggerMixin):
         """
         
         # first things first, add it to our db/queue
-        db_message = self.add_outgoing(msg.connection, msg.text, source)
+        db_message = self.add_outgoing(msg.connection, msg.text, source, status='P')
         self.info("Outgoing (%s): %s" % (msg.connection, msg.text))
 
         for phase in self.outgoing_phases:
@@ -196,6 +193,8 @@ class HttpRouter(object, LoggerMixin):
 
         if not getattr(settings, 'ROUTER_URL', None):
             print "No ROUTER_URL set in settings.py, queuing message for later delivery."
+            msg.status = 'Q'
+            msg.save()
             return
 
         params = {
@@ -210,13 +209,17 @@ class HttpRouter(object, LoggerMixin):
 
             if response.getcode() == 200:
                 self.info("Message: %s sent: " % msg.id)
+                msg.status = 'S'
+                msg.save()
             else:
-                self.outgoing.append(msg)
                 self.error("Message not sent, got status: %s .. queued for later delivery." % response.getcode())
+                msg.status = 'Q'
+                msg.save()
 
         except Exception as e:
-            self.outgoing.append(msg)
             self.error("Message not sent: %s .. queued for later delivery." % str(e))
+            msg.status = 'Q'
+            msg.save()
 
     def add_app(self, module_name):
         """
