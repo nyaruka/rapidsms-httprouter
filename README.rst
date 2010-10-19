@@ -50,7 +50,7 @@ If you want to use the included console and http tester, add it as a tab::
 
    RAPIDSMS_TABS = [
      ..
-     ("rapidsms_httprouter.views.console",                   "Console"),
+     ("rapidsms_httprouter.views.console", "Console"),
    ]
 
 Usage
