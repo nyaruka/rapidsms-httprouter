@@ -29,6 +29,23 @@ Put ``rapidsms_httprouter`` in your path, then add it to your ``INSTALLED_APPS``
       "rapidsms_httprouter"
     ]
 
+rapidsms-httprouter also only pulls in the applications you specify for SMS handling.  This lets you use the models from an existing SMS application.  So you'll need to also add an ``SMS_APPS`` list to your settings.py::
+
+    SMS_APPS = [
+        "mysms.coolapp",
+    ]
+
+Finally, if you want to have the router push messages to a specific URL when they are sent, you need to specify that in the settings.py as well::
+
+    ROUTER_URL = "http://backend.server.com/send?"
+
+The following fields will be appended to the URL as an HTTP GET::
+
+    'backend': the backend that is sending this message
+    'recipient': the phone number to send to
+    'text': the text to send 
+    'id': the internal rapidsms id for this message
+
 If you want to use the included console and http tester, add it as a tab::
 
    RAPIDSMS_TABS = [
