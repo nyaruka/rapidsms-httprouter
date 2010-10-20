@@ -216,7 +216,7 @@ class HttpRouter(object, LoggerMixin):
         params.update(kwargs)
         
         for k, v in params.items():
-            params[k] = quote(str(v))
+            params[k] = quote_plus(str(v))
         try:
             #FIXME: clean this up
             response = urlopen(settings.ROUTER_URL % params)
