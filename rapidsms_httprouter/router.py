@@ -6,7 +6,7 @@ from rapidsms.messages.incoming import IncomingMessage
 from rapidsms.log.mixin import LoggerMixin
 from threading import Lock
 
-from urllib import urlencode
+from urllib import quote
 from urllib2 import urlopen
 
 class HttpRouter(object, LoggerMixin):
@@ -38,7 +38,7 @@ class HttpRouter(object, LoggerMixin):
         
         # create our connection
         connection, created = Connection.objects.get_or_create(backend=backend, identity=contact)
-
+        print "CREATING CONNECTION %s %s" % (contact, created)
         # finally, create our db message
         message = Message.objects.create(connection=connection,
                                          text=text,
@@ -71,11 +71,10 @@ class HttpRouter(object, LoggerMixin):
         msg.db_message = db_message
         
         self.info("Incoming (%s): %s" % (msg.connection, msg.text))
-
+        print ("Incoming (%s): %s" % (msg.connection, msg.text))
         try:
             for phase in self.incoming_phases:
                 self.debug("In %s phase" % phase)
-
                 if phase == "default":
                     if msg.handled:
                         self.debug("Skipping phase")
@@ -158,6 +157,9 @@ class HttpRouter(object, LoggerMixin):
         
         # first things first, add it to our db/queue
         db_message = self.add_outgoing(msg.connection, msg.text, source, status='P')
+
+        #FIXME: check for available worker threads in the pool, add one if necessary
+        #FIXME: move below code to worker thread run method
         self.info("Outgoing (%s): %s" % (msg.connection, msg.text))
 
         for phase in self.outgoing_phases:
@@ -187,9 +189,11 @@ class HttpRouter(object, LoggerMixin):
 
         # add the message to our outgoing queue
         self.send_message(db_message)
+        
+        #FIXME: add above code to worker thread
         return db_message
 
-    def send_message(self, msg):
+    def send_message(self, msg, **kwargs):
         """
         Sends the message off.  We first try to directly contact our sms router to deliver it, 
         if we fail, then we just add it to our outgoing queue.
@@ -208,10 +212,18 @@ class HttpRouter(object, LoggerMixin):
             'id': msg.pk
         }
 
+        # add any other backend-specific parameters from kwargs
+        params.update(kwargs)
+        
+        for k, v in params.items():
+            params[k] = quote(str(v))
         try:
-            response = urlopen(settings.ROUTER_URL + urlencode(params))
+            #FIXME: clean this up
+            response = urlopen(settings.ROUTER_URL % params)
 
-            if response.getcode() == 200:
+            # kannel likes to send 202 responses, really any
+            # 2xx value means things went okay
+            if int(response.getcode()/100) == 2:
                 self.info("Message: %s sent: " % msg.id)
                 msg.status = 'S'
                 msg.save()
