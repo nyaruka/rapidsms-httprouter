@@ -65,7 +65,11 @@ class HttpRouter(object, LoggerMixin):
 
         # and our rapidsms transient message for processing
         msg = IncomingMessage(db_message.connection, text, db_message.date)
-
+        
+        # add an extra property to IncomingMessage, so httprouter-aware
+        # apps can make use of it during the handling phase
+        msg.db_message = db_message
+        
         self.info("Incoming (%s): %s" % (msg.connection, msg.text))
 
         try:
