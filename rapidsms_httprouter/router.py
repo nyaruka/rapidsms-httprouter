@@ -6,7 +6,7 @@ from rapidsms.messages.incoming import IncomingMessage
 from rapidsms.log.mixin import LoggerMixin
 from threading import Lock
 
-from urllib import quote
+from urllib import quote_plus
 from urllib2 import urlopen
 
 class HttpRouter(object, LoggerMixin):
