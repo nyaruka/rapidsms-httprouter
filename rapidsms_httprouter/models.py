@@ -26,7 +26,7 @@ class Message(models.Model):
     text       = models.TextField()
     direction  = models.CharField(max_length=1, choices=DIRECTION_CHOICES)
     status     = models.CharField(max_length=1, choices=STATUS_CHOICES)
-    date       = models.DateTimeField(default=datetime.datetime.now())
+    date       = models.DateTimeField(auto_now_add=True)
 
     in_response_to = models.ForeignKey('self', related_name='responses', null=True)
 
