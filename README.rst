@@ -58,6 +58,14 @@ Usage
 
 If you installed the tab, you should be able to click on the Console tab and immediately begin sending messages.  Note that you do not need to run the router process for this to work, instead the HTTP backend detects that there is no router and queues the messages for sending later. (the 'Q' status represents this)
 
+In your app.py, httprouter-aware applications can make use of an extra attribute that will be added to the IncomingMessage object, 'db_message'.  This is a reference to the actual database-persisted message::
+
+    def handle (self, message):
+        if hasattr(message, 'db_message'):
+           # do something cool, like add the message as a foreign key
+           # to one of your app's models, so you know where the model
+           # originated
+
 Endpoints
 ---------
 
