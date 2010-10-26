@@ -36,9 +36,12 @@ class HttpRouter(object, LoggerMixin):
         # any backends not found in our settings.  But I hate dropping messages on the floor.
         backend, created = Backend.objects.get_or_create(name=backend)
         
+        # some backends append a + to numbers, some don't
+        # this leads to duplications of numbers
+        if contact[0:1] == '+':
+            contact = contact[1:]
         # create our connection
         connection, created = Connection.objects.get_or_create(backend=backend, identity=contact)
-        print "CREATING CONNECTION %s %s" % (contact, created)
         # finally, create our db message
         message = Message.objects.create(connection=connection,
                                          text=text,
