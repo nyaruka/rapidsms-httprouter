@@ -4,6 +4,10 @@
     padding: 10px;
 }
 
+.sender .sender-form {
+    padding: 10px;
+}
+
 .messages table {
     width: 100%;
 }
