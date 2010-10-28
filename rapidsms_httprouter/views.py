@@ -114,12 +114,12 @@ def console(request):
         elif request.POST['action'] == 'reply':
             reply_form = ReplyForm(request.POST)
             if reply_form.is_valid():
-                try:
-                    conn = Connection.objects.get(identity=reply_form.cleaned_data['recipient'])
+                if Connection.objects.filter(identity=reply_form.cleaned_data['recipient']).count():
                     text = reply_form.cleaned_data['message']
+                    conn = Connection.objects.filter(identity=reply_form.cleaned_data['recipient'])[0]
                     outgoing = OutgoingMessage(conn, text)
                     get_router().handle_outgoing(outgoing)
-                except Connection.DoesNotExist:
+                else:
                     reply_form.errors['recipient'] = "This number isn't in the system"
 
     return render_to_response(
