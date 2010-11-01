@@ -16,7 +16,7 @@ STATUS_CHOICES = (
 
     ("Q", "Queued"),
     ("S", "Sent"),
-    ("D", "Delivered")
+    ("D", "Delivered"),
 
     ("C", "Cancelled"),
     ("E", "Errored")
