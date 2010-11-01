@@ -3,6 +3,7 @@ from .models import Message
 from rapidsms.models import Backend, Connection
 from rapidsms.apps.base import AppBase
 from rapidsms.messages.incoming import IncomingMessage
+from rapidsms.messages.outgoing import OutgoingMessage
 from rapidsms.log.mixin import LoggerMixin
 from threading import Lock
 
@@ -128,7 +129,11 @@ class HttpRouter(object, LoggerMixin):
         db_message.save()
 
         db_responses = []
-
+        
+        # respond with a default message if one exists
+        if (not msg.responses) and getattr(settings, 'DEFAULT_RESPONSE', None):
+            msg.responses.append(OutgoingMessage(db_message.connection, settings.DEFAULT_RESPONSE))
+            
         # now send the message responses
         while msg.responses:
             response = msg.responses.pop(0)
