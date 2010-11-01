@@ -56,7 +56,7 @@ class HttpRouter(object, LoggerMixin):
         Marks a message as sent by the backend.
         """
         message = Message.objects.get(pk=message_id)
-        message.status = 'S'
+        message.status = 'D'
         message.save()
 
 
