@@ -81,7 +81,7 @@ class MessageTable(Table):
     direction = Column()
     connection = Column(link = lambda cell: "javascript:reply('%s')" % cell.row.connection.identity)
     status = Column()
-    date = DateColumn(format="m/d/Y H:m:s")
+    date = DateColumn(format="m/d/Y H:i:s")
 
     class Meta:
         order_by = '-date'
