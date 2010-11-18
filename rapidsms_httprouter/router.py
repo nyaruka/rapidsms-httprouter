@@ -53,7 +53,7 @@ class HttpRouterThread(Thread, LoggerMixin):
                     outgoing_pk_queue.append(outgoing_message.pk)
                     outgoing_queue_lock.release()
 
-                    msg = OutgoingMessage(outgoing_message.connection, outgoing_message.text)
+                    msg = OutgoingMessage(outgoing_message.connection, outgoing_message.text.replace('%','%%'))
                     msg.db_message = outgoing_message
                     self.info("Outgoing (%s): %s" % (msg.connection, msg.text))
 
