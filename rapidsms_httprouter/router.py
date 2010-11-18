@@ -124,7 +124,7 @@ class HttpRouterThread(Thread, LoggerMixin):
         params.update(kwargs)
 
         for k, v in params.items():
-            params[k] = quote_plus(str(v))
+            params[k] = quote_plus(str(v.encode('UTF-8')))
         try:
             #FIXME: clean this up
             response = urlopen(settings.ROUTER_URL % params)
