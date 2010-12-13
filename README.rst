@@ -2,9 +2,22 @@
 RapidSMS HTTP Router
 ====================
 
-Implements http endpoints to allow for the RapidSMS 'routing' process to be done in the HTTP thread.  This is a very rough first cut held together with bailing wire.
+Implements HTTP endpoints to allow for the RapidSMS 'routing' process to be done in the HTTP thread.
 
-Built by Nyaruka: http://www.nyaruka.com/
+**Distinct features**
+
+- All message handling is done in the Django HTTP thread
+- Easy 'AJAX' endpoints for receiving messages, marking messages as delivered and getting the current outbox
+- Supports either queueing messages in the DB to be sent off by an outside process (pull) or sending messages to a configured URL. (push)
+- Includes a simple HTTP console web application that integrates with RapidSMS
+- "play alike" implementation with RapidSMS, no changes needed to existing applications
+- Easy and reliable standalone integration with Kannel
+
+The official source code repository is:
+  http://www.github.com/nyaruka/rapidsms-httprouter
+
+Built by Nyaruka Ltd:
+  http://www.nyaruka.com
 
 Caveats
 -------
@@ -29,7 +42,14 @@ Put ``rapidsms_httprouter`` in your path, then add it to your ``INSTALLED_APPS``
       "rapidsms_httprouter"
     ]
 
-rapidsms-httprouter also only pulls in the applications you specify for SMS handling.  This lets you use the models from an existing SMS application.  So you'll need to also add an ``SMS_APPS`` list to your settings.py::
+And add it to your project's urls.py::
+
+   urlpatterns = patterns('',
+      .. other url patterns ..
+      ('', include('rapidsms_httprouter.urls'))
+   )
+
+rapidsms-httprouter also only pulls in the applications you specify for SMS handling.  This lets you use the models from an existing SMS application.  So you'll need to add an ``SMS_APPS`` list to your settings.py::
 
     SMS_APPS = [
         "mysms.coolapp",
@@ -37,9 +57,9 @@ rapidsms-httprouter also only pulls in the applications you specify for SMS hand
 
 Finally, if you want to have the router push messages to a specific URL when they are sent, you need to specify that in the settings.py as well::
 
-    ROUTER_URL = "http://backend.server.com/send?"
+    ROUTER_URL = "http://backend.server.com/send?backend=%(backend)s&recipient=%(recipient)s&text=%(text)s"
 
-The following fields will be appended to the URL as an HTTP GET::
+The following fields will be substituted into that string and the resulting URL will then be called via an HTTP GET::
 
     'backend': the backend that is sending this message
     'recipient': the phone number to send to
@@ -94,8 +114,28 @@ You can mark a message as sent, or delivered usign the URL::
 
     /router/delivered?message_id=<message id>
 
+Kannel Integration
+------------------
 
+RapidSMS-HttpRouter works especially well when used with a standalone Kannel configuration.  You just need to configure it to send messages in the format Kannel expects and vice versa.
 
+In your settings.py set your ROUTER_URL like so, adjusting appropriately based on your Kannel configuration::
+
+   ROUTER_URL = "http://localhost:13013/cgi-bin/sendsms?from=8500&username=kannel&password=kannel&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&dlr_url=http%%3A%%2F%%2Fmyrapid.com%%2Frouter%%2Fdelivered%%2F%%3Fmessage_id%%3D%(id)s"
+
+The important thing to note here is the dlr_url parameter, which while optional, lets you get delivery reports and mark messages as not just sent but actually delivered according to the SMSC.
+
+A basic Kannel sms-service configuration that would work for this might be::
+
+  group = sms-service
+  keyword = default
+  max-messages = 0 
+  get-url = "http://myrapid.com/router/receive/?backend=%i&sender=%p&message=%b"
+  allowed-receiver-prefix = 123;+123
+  concatenation = true
+  assume-plain-text = true
+  accept-x-kannel-headers = true
+  omit-empty = true
 
 
 
