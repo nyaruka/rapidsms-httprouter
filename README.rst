@@ -19,6 +19,9 @@ The official source code repository is:
 Built by Nyaruka Ltd:
   http://www.nyaruka.com
 
+Contributions by UNICEF Uganda:
+  http://www.unicef.org
+
 Caveats
 -------
 
@@ -30,8 +33,24 @@ Since this obviously does things differently, some things break.  Specifically t
 
 The HTTP Router app replaces most of the functionality provided by these packages.  Specifically all messages passing through the HTTP router will be logged automatically and it provides a web interface for viewing and submitting new messages.
 
-Installation
-------------
+Installation From Cheese Shop
+===========================================
+
+You can install the latest version of the rapidsms-xforms library straight from the cheese shop::
+
+   % pip install rapidsms-httprouter
+
+Installation From Github
+===========================================
+
+You can always get the latest version of rapidsms-httprouter from github.  Note that the tip of the repo is not guaranteed to be stable.  You should use the verison available via pip unless you have a specific reason not to.
+
+You can install the requirements using the ``pip-requires.txt`` file::
+
+   % pip install -r pip-requires.txt
+
+Configuration
+=============
 
 Put ``rapidsms_httprouter`` in your path, then add it to your ``INSTALLED_APPS`` setting::
 
@@ -74,7 +93,7 @@ If you want to use the included console and http tester, add it as a tab::
    ]
 
 Usage
------
+=====
 
 If you installed the tab, you should be able to click on the Console tab and immediately begin sending messages.  Note that you do not need to run the router process for this to work, instead the HTTP backend detects that there is no router and queues the messages for sending later. (the 'Q' status represents this)
 
@@ -87,7 +106,7 @@ In your app.py, httprouter-aware applications can make use of an extra attribute
            # originated
 
 Endpoints
----------
+=========
 
 The HTTP router provides the following endpoints:
 
@@ -115,13 +134,13 @@ You can mark a message as sent, or delivered usign the URL::
     /router/delivered?message_id=<message id>
 
 Kannel Integration
-------------------
+==================
 
 RapidSMS-HttpRouter works especially well when used with a standalone Kannel configuration.  You just need to configure it to send messages in the format Kannel expects and vice versa.
 
 In your settings.py set your ROUTER_URL like so, adjusting appropriately based on your Kannel configuration::
 
-   ROUTER_URL = "http://localhost:13013/cgi-bin/sendsms?from=8500&username=kannel&password=kannel&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&dlr_url=http%%3A%%2F%%2Fmyrapid.com%%2Frouter%%2Fdelivered%%2F%%3Fmessage_id%%3D%(id)s"
+   ROUTER_URL = "http://localhost:13013/cgi-bin/sendsms?from=123&username=kannel&password=kannel&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&dlr_url=http%%3A%%2F%%2Fmyrapid.com%%2Frouter%%2Fdelivered%%2F%%3Fmessage_id%%3D%(id)s"
 
 The important thing to note here is the dlr_url parameter, which while optional, lets you get delivery reports and mark messages as not just sent but actually delivered according to the SMSC.
 

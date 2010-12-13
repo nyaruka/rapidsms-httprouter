@@ -6,7 +6,7 @@ setup(
     license="BSD",
 
     install_requires = [
-        "rapidsms",
+        "rapidsms==0.9.6a",
     ],
 
     description='Provides a HTTP endpoints into the RapidSMS router, doing all handling in the HTTP thread.',
