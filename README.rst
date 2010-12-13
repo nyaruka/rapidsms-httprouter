@@ -1,4 +1,3 @@
-
 RapidSMS HTTP Router
 ====================
 
@@ -34,14 +33,14 @@ Since this obviously does things differently, some things break.  Specifically t
 The HTTP Router app replaces most of the functionality provided by these packages.  Specifically all messages passing through the HTTP router will be logged automatically and it provides a web interface for viewing and submitting new messages.
 
 Installation From Cheese Shop
-===========================================
+=============================
 
 You can install the latest version of the rapidsms-xforms library straight from the cheese shop::
 
    % pip install rapidsms-httprouter
 
 Installation From Github
-===========================================
+========================
 
 You can always get the latest version of rapidsms-httprouter from github.  Note that the tip of the repo is not guaranteed to be stable.  You should use the verison available via pip unless you have a specific reason not to.
 
@@ -111,7 +110,7 @@ Endpoints
 The HTTP router provides the following endpoints:
 
 Receive
-~~~~~~~~
+-------
 
 Messages can be handled and put through the router process using the URL, the result is json::
     
@@ -119,7 +118,7 @@ Messages can be handled and put through the router process using the URL, the re
 
 
 Outbox
-~~~~~~~
+------
 
 You can see any pending messages which need to be sent using the URL, the result is json::
 
@@ -127,7 +126,7 @@ You can see any pending messages which need to be sent using the URL, the result
 
 
 Delivered
-~~~~~~~~~~
+---------
 
 You can mark a message as sent, or delivered usign the URL::
 
