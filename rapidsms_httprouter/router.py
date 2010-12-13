@@ -43,7 +43,6 @@ class HttpRouterThread(Thread, LoggerMixin):
         global sending_mass_messages
         while self.is_alive():
             if not sending_mass_messages:
-                print "*************worker thread doing work"
                 outgoing_queue_lock.acquire()
 
                 to_process = Message.objects.filter(direction='O',status__in=['P','Q']).order_by('status').exclude(pk__in=outgoing_pk_queue)
@@ -355,7 +354,6 @@ class HttpRouter(object, LoggerMixin):
         Initializes our router.
         TODO: this happens in the HTTP thread on the first call, that could be bad.
         """
-
         # add all our apps
         for app_name in settings.SMS_APPS:
             self.add_app(app_name)

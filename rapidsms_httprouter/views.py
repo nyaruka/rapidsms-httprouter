@@ -120,7 +120,8 @@ def console(request):
                     outgoing = OutgoingMessage(conn, text)
                     get_router().handle_outgoing(outgoing)
                 else:
-                    reply_form.errors['recipient'] = "This number isn't in the system"
+                    reply_form.errors.setdefault('short_description', ErrorList())
+                    reply_form.errors['recipient'].append("This number isn't in the system")                    
 
     return render_to_response(
         "router/index.html", {
