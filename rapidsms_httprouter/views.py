@@ -6,7 +6,8 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response
 
 from rapidsms.messages.incoming import IncomingMessage
-
+from rapidsms.messages.outgoing import OutgoingMessage
+from rapidsms.models import Connection
 from djtables import Table, Column
 from djtables.column import DateColumn
 
@@ -78,16 +79,20 @@ class MessageTable(Table):
     # this is temporary, until i fix ModelTable!
     text = Column()
     direction = Column()
-    connection = Column()
+    connection = Column(link = lambda cell: "javascript:reply('%s')" % cell.row.connection.identity)
     status = Column()
-    date = DateColumn(format="m/d/Y H:m:s")
+    date = DateColumn(format="m/d/Y H:i:s")
 
     class Meta:
         order_by = '-date'
 
 class SendForm(forms.Form):
     sender = forms.CharField(max_length=20, initial="12065551212")
-    text = forms.CharField(max_length=160, label="Message", widget=forms.TextInput(attrs={'size':'100'}))
+    text = forms.CharField(max_length=160, label="Message", widget=forms.TextInput(attrs={'size':'60'}))
+
+class ReplyForm(forms.Form):
+    recipient = forms.CharField(max_length=20)
+    message = forms.CharField(max_length=160, widget=forms.TextInput(attrs={'size':'60'}))
 
 def console(request):
     """
@@ -95,20 +100,33 @@ def console(request):
     processing.
     """
 
-    if request.method == 'GET':
-        form = SendForm()
-    else:
-        form = SendForm(request.POST)
-        if form.is_valid():
-            backend = "console"
-            message = get_router().handle_incoming(backend, 
-                                                   form.cleaned_data['sender'],
-                                                   form.cleaned_data['text'])
+    form = SendForm()
+    reply_form = ReplyForm()
+    if request.method == 'POST':
+        if request.POST['action'] == 'test':
+            form = SendForm(request.POST)
+            if form.is_valid():
+                backend = "console"
+                message = get_router().handle_incoming(backend,
+                                                       form.cleaned_data['sender'],
+                                                       form.cleaned_data['text'])
+            reply_form = ReplyForm()
+        elif request.POST['action'] == 'reply':
+            reply_form = ReplyForm(request.POST)
+            if reply_form.is_valid():
+                if Connection.objects.filter(identity=reply_form.cleaned_data['recipient']).count():
+                    text = reply_form.cleaned_data['message']
+                    conn = Connection.objects.filter(identity=reply_form.cleaned_data['recipient'])[0]
+                    outgoing = OutgoingMessage(conn, text)
+                    get_router().handle_outgoing(outgoing)
+                else:
+                    reply_form.errors['recipient'] = "This number isn't in the system"
 
     return render_to_response(
         "router/index.html", {
             "messages_table": MessageTable(Message.objects.all(), request=request),
-            "form": form
+            "form": form,
+            "reply_form": reply_form
         }, context_instance=RequestContext(request)
     )
 

@@ -9,14 +9,30 @@
 
 {% block content %}
 <div class="tester module">
-  <h2>Tester</h2>
+  <h2>Incoming Message Tester</h2>
   <form method="POST" class="tester-form">
     {{ form }}
-    <input type="submit" value="send" />
+    <input type="hidden" name="action" value="test" />
+    <input type="submit" value="test" />
     {% csrf_token %}
   </form>
 </div>
 
+<div class="sender module">
+  <h2>Send Message</h2>
+  <form method="POST" class="sender-form">
+    {{ reply_form }}
+    <input type="hidden" name="action" value="reply" />
+    <input type="submit" value="send" />
+    {% csrf_token %}
+  </form>
+  <script language="javascript">
+    function reply(number) {
+        $('#id_recipient').val(number);
+        return void(0);
+    }
+  </script>
+</div>
 
 <div class="messages module">
 	<h2>Message Log</h2>
