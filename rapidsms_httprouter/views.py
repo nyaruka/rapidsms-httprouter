@@ -69,7 +69,7 @@ def delivered(request):
     if not form.is_valid():
         return HttpResponse(str(form.errors()), status=400)
 
-    get_router().mark_sent(form.cleaned_data['message_id'])
+    get_router().mark_delivered(form.cleaned_data['message_id'])
 
     return HttpResponse(json.dumps(dict(status="Message marked as sent.")))
 
