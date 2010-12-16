@@ -26,6 +26,29 @@ class RouterTest(TestCase):
         # configure with bare minimum to run the http router
         settings.SMS_APPS = []
 
+    def testAddMessage(self):
+        router = get_router()
+
+        # tests that messages are correctly build
+        msg1 = router.add_message('test', '+250788383383', 'test', 'I', 'P')
+        self.assertEquals('test', msg1.connection.backend.name)
+        self.assertEquals('250788383383', msg1.connection.identity)
+        self.assertEquals('test', msg1.text)
+        self.assertEquals('I', msg1.direction)
+        self.assertEquals('P', msg1.status)
+
+        # test that connetions are reused and that numbers are normalized
+        msg2 = router.add_message('test', '250788383383', 'test', 'I', 'P')
+        self.assertEquals(msg2.connection.pk, msg1.connection.pk)
+
+        # test that connections are reused and that numbers are normalized
+        msg3 = router.add_message('test', '250-7883-83383', 'test', 'I', 'P')
+        self.assertEquals(msg3.connection.pk, msg1.connection.pk)
+
+        # allow letters, maybe shortcodes are using mappings to numbers
+        msg4 = router.add_message('test', 'asdfASDF', 'test', 'I', 'P')
+        self.assertEquals('asdfasdf', msg4.connection.identity)
+        
     def testRouter(self):
         router = get_router()
 

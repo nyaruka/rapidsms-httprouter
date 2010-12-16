@@ -10,6 +10,7 @@ from threading import Lock, Thread
 from urllib import quote_plus
 from urllib2 import urlopen
 import time
+import re
 
 # we keep a list of all the messages currently being processed here
 outgoing_pk_queue = []
@@ -145,6 +146,14 @@ class HttpRouter(object, LoggerMixin):
         # we need to be started
         self.started = False
 
+    @classmethod
+    def normalize_number(cls, number):
+        """
+        Normalizes the passed in number, they should be only digits, some backends prepend + and
+        maybe crazy users put in dashes or parentheses in the console.
+        """
+        return re.sub('[^0-9a-z]', '', number.lower())
+
     def add_message(self, backend, contact, text, direction, status):
         """
         Adds this message to the db.  This is both for logging, and we also keep state
@@ -156,11 +165,9 @@ class HttpRouter(object, LoggerMixin):
         # TODO: is this too flexible?  Perhaps we should do this upon initialization and refuse 
         # any backends not found in our settings.  But I hate dropping messages on the floor.
         backend, created = Backend.objects.get_or_create(name=backend)
-        
-        # some backends append a + to numbers, some don't
-        # this leads to duplications of numbers
-        if contact[0:1] == '+':
-            contact = contact[1:]
+
+        contact = HttpRouter.normalize_number(contact)
+
         # create our connection
         connection, created = Connection.objects.get_or_create(backend=backend, identity=contact)
 
