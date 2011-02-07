@@ -1,4 +1,4 @@
-from django.conf import settings
+1;2cfrom django.conf import settings
 from .models import Message
 from rapidsms.models import Backend, Connection
 from rapidsms.apps.base import AppBase
@@ -317,8 +317,6 @@ class HttpRouter(object, LoggerMixin):
 
         # otherwise, fire up any threads we need to send the message out
         else:
-            import pdb; pdb.set_trace();
-
             # check for available worker threads in the pool, add one if necessary
             num_workers = getattr(settings, 'ROUTER_WORKERS', 5)
             all_busy = True
