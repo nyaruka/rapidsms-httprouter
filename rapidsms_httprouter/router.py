@@ -1,4 +1,4 @@
-from django.conf import settings
+1;2cfrom django.conf import settings
 from .models import Message
 from rapidsms.models import Backend, Connection
 from rapidsms.apps.base import AppBase
@@ -64,6 +64,7 @@ class HttpRouterThread(Thread, LoggerMixin):
                     # which are already being processed
                     to_process = Message.objects.filter(direction='O',
                                                         status__in=['P','Q']).order_by('status').exclude(pk__in=outgoing_pk_queue)
+
                     if to_process.count():
                         self._isbusy = True
                         outgoing_message = to_process[0]
@@ -278,7 +279,7 @@ class HttpRouter(object, LoggerMixin):
         return db_message
 
 
-    def add_outgoing(self, connection, text, source=None, status='Q'):
+    def add_outgoing(self, connection, text, source=None, status='Q', send=True):
         """
         Adds a message to our outgoing queue, this is a non-blocking action
         """
@@ -290,6 +291,9 @@ class HttpRouter(object, LoggerMixin):
                                             status=status,
                                             in_response_to=source)
         outgoing_db_lock.release()
+        if send:
+            self.send_message(db_message)
+
         return db_message
                 
     def handle_outgoing(self, msg, source=None):
@@ -299,8 +303,8 @@ class HttpRouter(object, LoggerMixin):
         """
         global outgoing_worker_threads
         
-        # add it to our db/queue
-        db_message = self.add_outgoing(msg.connection, msg.text, source, status='P')
+        # first things first, add it to our db/queue
+        db_message = self.add_outgoing(msg.connection, msg.text, source, status='P', send=False)
 
         # if we have no ROUTER_URL configured, then immediately process our outgoing phases
         # and leave the message in the queue
@@ -313,6 +317,8 @@ class HttpRouter(object, LoggerMixin):
 
         # otherwise, fire up any threads we need to send the message out
         else:
+            import pdb; pdb.set_trace();
+
             # check for available worker threads in the pool, add one if necessary
             num_workers = getattr(settings, 'ROUTER_WORKERS', 5)
             all_busy = True
@@ -320,11 +326,12 @@ class HttpRouter(object, LoggerMixin):
                 if not worker.is_busy():
                     all_busy = False
                     break
-                if all_busy and len(outgoing_worker_threads) < num_workers:
-                    worker = HttpRouterThread()
-                    worker.daemon = True # they don't need to quit gracefully
-                    worker.start()
-                    outgoing_worker_threads.append(worker)
+            
+            if all_busy and len(outgoing_worker_threads) < num_workers:
+                worker = HttpRouterThread()
+                worker.daemon = True # they don't need to quit gracefully
+                worker.start()
+                outgoing_worker_threads.append(worker)
         
         return db_message
 
