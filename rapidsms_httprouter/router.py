@@ -1,4 +1,4 @@
-1;2cfrom django.conf import settings
+from django.conf import settings
 from .models import Message
 from rapidsms.models import Backend, Connection
 from rapidsms.apps.base import AppBase
