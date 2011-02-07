@@ -1,2 +1,2 @@
--e git+http://github.com/rapidsms/rapidsms.git#egg=rapidsms
+rapidsms==0.96a
 
