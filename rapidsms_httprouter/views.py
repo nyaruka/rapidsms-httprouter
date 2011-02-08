@@ -14,10 +14,13 @@ from djtables.column import DateColumn
 from .models import Message
 from .router import get_router
 
+from django.conf import settings;
+
 class MessageForm(forms.Form):
     backend = forms.CharField(max_length=32)
     sender = forms.CharField(max_length=20)
     message = forms.CharField(max_length=160)
+    echo = forms.BooleanField(required=False)
 
 def receive(request):
     """
@@ -40,7 +43,11 @@ def receive(request):
     response['responses'] = [m.as_json() for m in message.responses.all()]
     response['status'] = "Message handled."
 
-    return HttpResponse(json.dumps(response))
+    # do we default to having silent responses?  200 means success in this case
+    if getattr(settings, "ROUTER_SILENT", False) and (not 'echo' in data or not data['echo']):
+        return HttpResponse()
+    else:
+        return HttpResponse(json.dumps(response))
 
 def outbox(request):
     """
@@ -69,7 +76,7 @@ def delivered(request):
     if not form.is_valid():
         return HttpResponse(str(form.errors()), status=400)
 
-    get_router().mark_sent(form.cleaned_data['message_id'])
+    get_router().mark_delivered(form.cleaned_data['message_id'])
 
     return HttpResponse(json.dumps(dict(status="Message marked as sent.")))
 
@@ -111,6 +118,7 @@ def console(request):
                                                        form.cleaned_data['sender'],
                                                        form.cleaned_data['text'])
             reply_form = ReplyForm()
+            
         elif request.POST['action'] == 'reply':
             reply_form = ReplyForm(request.POST)
             if reply_form.is_valid():
