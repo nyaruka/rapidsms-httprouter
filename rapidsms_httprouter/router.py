@@ -279,7 +279,7 @@ class HttpRouter(object, LoggerMixin):
         return db_message
 
 
-    def add_outgoing(self, connection, text, source=None, status='Q', send=True):
+    def add_outgoing(self, connection, text, source=None, status='Q'):
         """
         Adds a message to our outgoing queue, this is a non-blocking action
         """
@@ -291,20 +291,8 @@ class HttpRouter(object, LoggerMixin):
                                             status=status,
                                             in_response_to=source)
         outgoing_db_lock.release()
-        if send:
-            self.send_message(db_message)
 
-        return db_message
-                
-    def handle_outgoing(self, msg, source=None):
-        """
-        Sends the passed in RapidSMS message off.  Optionally ties the outgoing message to the incoming
-        message which triggered it.
-        """
         global outgoing_worker_threads
-        
-        # first things first, add it to our db/queue
-        db_message = self.add_outgoing(msg.connection, msg.text, source, status='P', send=False)
 
         # if we have no ROUTER_URL configured, then immediately process our outgoing phases
         # and leave the message in the queue
@@ -330,6 +318,16 @@ class HttpRouter(object, LoggerMixin):
                 worker.daemon = True # they don't need to quit gracefully
                 worker.start()
                 outgoing_worker_threads.append(worker)
+
+        return db_message
+                
+    def handle_outgoing(self, msg, source=None):
+        """
+        Sends the passed in RapidSMS message off.  Optionally ties the outgoing message to the incoming
+        message which triggered it.
+        """
+        # add it to our outgoing queue
+        db_message = self.add_outgoing(msg.connection, msg.text, source, status='P')
         
         return db_message
 
