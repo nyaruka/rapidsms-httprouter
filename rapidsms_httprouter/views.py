@@ -4,6 +4,7 @@ from django import forms
 from django.http import HttpResponse
 from django.template import RequestContext
 from django.shortcuts import render_to_response
+from django.conf import settings;
 
 from rapidsms.messages.incoming import IncomingMessage
 from rapidsms.messages.outgoing import OutgoingMessage
@@ -13,8 +14,6 @@ from djtables.column import DateColumn
 
 from .models import Message
 from .router import get_router
-
-from django.conf import settings;
 
 class MessageForm(forms.Form):
     backend = forms.CharField(max_length=32)
