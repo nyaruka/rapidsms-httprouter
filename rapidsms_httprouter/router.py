@@ -81,14 +81,14 @@ class HttpRouterThread(Thread, LoggerMixin):
                         outgoing_queue_lock.acquire()
                         outgoing_pk_queue.remove(outgoing_message.pk)
                         outgoing_queue_lock.release()
-                except e:
+                except:
                     import traceback
                     traceback.print_exc()
                         
                 finally:
                     try:
                         outgoing_queue_lock.release()
-                    except e:
+                    except:
                         # it's ok, it wasn't locked
                         pass
             self._isbusy = False
