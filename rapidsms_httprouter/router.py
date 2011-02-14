@@ -123,16 +123,16 @@ class HttpRouterThread(Thread, LoggerMixin):
             # kannel likes to send 202 responses, really any
             # 2xx value means things went okay
             if int(response.getcode()/100) == 2:
-                self.info("Message: %s sent: " % msg.id)
+                self.info("SMS[%d] SENT" % msg.id)
                 msg.status = 'S'
                 msg.save()
             else:
-                self.error("Message not sent, got status: %s .. queued for later delivery." % response.getcode())
+                self.error("SMS[%d] Message not sent, got status: %s .. queued for later delivery." % (msg.id, response.getcode()))
                 msg.status = 'Q'
                 msg.save()
             outgoing_db_lock.release()
         except Exception as e:
-            self.error("Message not sent: %s .. queued for later delivery." % str(e))
+            self.error("SMS[%d] Message not sent: %s .. queued for later delivery." % (msg.id, str(e)))
             outgoing_db_lock.acquire()
             msg.status = 'Q'
             msg.save()
@@ -218,7 +218,7 @@ class HttpRouter(object, LoggerMixin):
         # apps can make use of it during the handling phase
         msg.db_message = db_message
         
-        self.info("Incoming (%s): %s" % (msg.connection, msg.text))
+        self.info("SMS[%d] IN (%s) : %s" % (db_message.id, msg.connection, msg.text))
         try:
             for phase in self.incoming_phases:
                 self.debug("In %s phase" % phase)
@@ -299,6 +299,8 @@ class HttpRouter(object, LoggerMixin):
                                             status=status,
                                             in_response_to=source)
         outgoing_db_lock.release()
+
+        self.info("SMS[%d] OUT (%s) : %s" % (db_message.id, str(connection), text))
 
         global outgoing_worker_threads
 
