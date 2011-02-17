@@ -399,7 +399,9 @@ class HttpRouter(object, LoggerMixin):
         except:
             cls = None
 
-        if cls is None: return None
+        if cls is None:
+            self.error("Unable to find SMS application with module: '%s'" % module_name)
+            return None
 
         app = cls(self)
         self.apps.append(app)
