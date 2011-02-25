@@ -15,7 +15,24 @@ from djtables.column import DateColumn
 from .models import Message
 from .router import get_router
 
-class MessageForm(forms.Form):
+class SecureForm(forms.Form):
+    """
+    Abstracts out requirement of a password.  If you have a password set
+    in settings.py, then this will make sure it is included in all outbox,
+    receive and delivered calls.
+    """
+    password = forms.CharField(required=False)
+
+    def clean(self):
+        # if a password required in our settings
+        password = getattr(settings, "ROUTER_PASSWORD", None)
+        if password:
+            if not 'password' in self.cleaned_data or self.cleaned_data['password'] != password:
+                raise forms.ValidationError("You must specify a valid password.")
+
+        return self.cleaned_data
+
+class MessageForm(SecureForm):
     backend = forms.CharField(max_length=32)
     sender = forms.CharField(max_length=20)
     message = forms.CharField(max_length=160)
@@ -34,7 +51,6 @@ def receive(request):
 
     # otherwise, create the message
     data = form.cleaned_data
-
     message = get_router().handle_incoming(data['backend'], data['sender'], data['message'])
 
     response = {}
@@ -53,6 +69,10 @@ def outbox(request):
     Returns any messages which have been queued to be sent but have no yet been marked
     as being delivered.
     """
+    form = SecureForm(request.GET)
+    if not form.is_valid():
+        return HttpResponse(str(form.errors), status=400)        
+    
     response = {}
     messages = []
     for message in Message.objects.filter(status='Q'):
@@ -63,7 +83,7 @@ def outbox(request):
 
     return HttpResponse(json.dumps(response))
 
-class DeliveredForm(forms.Form):
+class DeliveredForm(SecureForm):
     message_id = forms.IntegerField()
 
 def delivered(request):
@@ -73,7 +93,7 @@ def delivered(request):
     form = DeliveredForm(request.GET)
     
     if not form.is_valid():
-        return HttpResponse(str(form.errors()), status=400)
+        return HttpResponse(str(form.errors), status=400)
 
     get_router().mark_delivered(form.cleaned_data['message_id'])
 
@@ -81,7 +101,6 @@ def delivered(request):
 
 
 class MessageTable(Table):
-
     # this is temporary, until i fix ModelTable!
     text = Column()
     direction = Column()
@@ -105,7 +124,6 @@ def console(request):
     Our web console, lets you see recent messages as well as send out new ones for
     processing.
     """
-
     form = SendForm()
     reply_form = ReplyForm()
     if request.method == 'POST':

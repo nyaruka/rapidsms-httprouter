@@ -217,6 +217,10 @@ class ViewTest(TestCase):
         self.assertEquals("2067799294", message['contact'])
         self.assertEquals("echo test", message['text'])
 
+        # test sending errant delivery report
+        response = self.client.get("/router/delivered")
+        self.assertEquals(400, response.status_code)        
+
         # mark the message as delivered
         response = self.client.get("/router/delivered?message_id=" + str(message['id']))
         self.assertEquals(200, response.status_code)
@@ -230,7 +234,54 @@ class ViewTest(TestCase):
         outbox = json.loads(response.content)
 
         self.assertEquals(0, len(outbox['outbox']))
-                
+
+
+    def testSecurity(self):
+        try:
+            settings.ROUTER_PASSWORD = "foo"
+
+            # no dice without password
+            response = self.client.get("/router/outbox")
+            self.assertEquals(400, response.status_code)
+
+            response = self.client.get("/router/outbox?password=bar")
+            self.assertEquals(400, response.status_code)
+
+            # works with a pword
+            response = self.client.get("/router/outbox?password=foo")
+            self.assertEquals(200, response.status_code)
+
+            msg_count = Message.objects.all().count()
+
+            # delivered doesn't work without pword
+            response = self.client.get("/router/receive?backend=test_backend&sender=2067799294&message=test")
+            self.assertEquals(400, response.status_code)
+
+            # assert the msg wasn't processed
+            self.assertEquals(msg_count, Message.objects.all().count())
+
+            response = self.client.get("/router/receive?backend=test_backend&sender=2067799294&message=test&password=foo")
+            self.assertEquals(200, response.status_code)
+
+            # now we have one new incoming message and one new outgoing message
+            self.assertEquals(msg_count+2, Message.objects.all().count())
+
+            # grab the last message and let's test the delivery report
+            message = Message.objects.filter(direction='O').order_by('-id')[0]
+
+            # no dice w/o password
+            response = self.client.get("/router/delivered?message_id=" + str(message.pk))
+            self.assertEquals(400, response.status_code)
+
+            # but works with it
+            response = self.client.get("/router/delivered?password=foo&message_id=" + str(message.pk))
+            self.assertEquals(200, response.status_code)
+
+            # make sure the message was marked as delivered
+            message = Message.objects.get(id=message.id)
+            self.assertEquals('D', message.status)
+        finally:
+            settings.ROUTER_PASSWORD = None
     
 
         

@@ -155,7 +155,14 @@ A basic Kannel sms-service configuration that would work for this might be::
   accept-x-kannel-headers = true
   omit-empty = true
 
+Security
+========
 
+It is a good idea to have some security on who can deliver messages to your system, who can see the outbox and who can can mark messages as delivered.  You can lock these down in a rudimentary fashion by settings the ROUTER_PASSWORD attribute in your settings.py::
+
+   ROUTER_PASSWORD = "landshark"
+
+Any incoming requests to those endpoints will fail if it is not included.
 
 
 

@@ -397,6 +397,8 @@ class HttpRouter(object, LoggerMixin):
         try:
             cls = AppBase.find(module_name)
         except:
+            import traceback
+            traceback.print_exc()
             cls = None
 
         if cls is None:
