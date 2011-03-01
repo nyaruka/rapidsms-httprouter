@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import transaction
 from .models import Message
 from rapidsms.models import Backend, Connection
 from rapidsms.apps.base import AppBase
@@ -58,9 +59,13 @@ class HttpRouterThread(Thread, LoggerMixin):
         while self.is_alive():
             if not sending_mass_messages:
                 outgoing_queue_lock.acquire()
+                transaction.enter_transaction_management()
 
                 try:
-                    # this gets any outgoing messages which are either pending or queued, exlcuding those
+                    # without this, our to_process list gets cached
+                    transaction.commit()
+
+                    # this gets any outgoing messages which are either pending or queued, excluding those
                     # which are already being processed
                     to_process = Message.objects.filter(direction='O',
                                                         status__in=['P','Q']).order_by('status').exclude(pk__in=outgoing_pk_queue)
@@ -322,7 +327,7 @@ class HttpRouter(object, LoggerMixin):
                 if not worker.is_busy():
                     all_busy = False
                     break
-            
+
             if all_busy and len(outgoing_worker_threads) < num_workers:
                 worker = HttpRouterThread()
                 worker.daemon = True # they don't need to quit gracefully
