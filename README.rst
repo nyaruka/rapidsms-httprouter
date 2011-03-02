@@ -162,7 +162,7 @@ Note that if you have multiple backends, you can set your ROUTER_URL setting to 
 
     ROUTER_URL = {
         'tigo': 'http://kannel.tigo.com/cgi-bin/sendsms?from=123&username=kannel&password=kannel&text=%(text)s&to=%(recipient)s&smsc=%(backend)s',
-	'default': ''http://kannel.mtn.com/cgi-bin/sendsms?from=123&username=kannel&password=kannel&text=%(text)s&to=%(recipient)s&smsc=%(backend)s',
+	'default': 'http://kannel.mtn.com/cgi-bin/sendsms?from=123&username=kannel&password=kannel&text=%(text)s&to=%(recipient)s&smsc=%(backend)s',
     }
 
 Note that you must either have one entry per backend, or include a 'default' element, which will be used whenever there is not a specific match.
