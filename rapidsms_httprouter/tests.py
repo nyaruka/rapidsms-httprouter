@@ -6,8 +6,9 @@ Not complete by any means, but having something to start with means we can
 add issues as they occur so we have automated regression testing.
 
 """
-from django.test import TestCase
-from .router import get_router
+import time
+from django.test import TestCase, TransactionTestCase
+from .router import get_router, HttpRouterThread
 from .models import Message
 
 from rapidsms.models import Backend, Connection
@@ -16,6 +17,98 @@ from rapidsms.messages.incoming import IncomingMessage
 from rapidsms.messages.outgoing import OutgoingMessage
 from django.conf import settings
 
+class BackendTest(TransactionTestCase):
+
+    def setUp(self):
+        (self.backend, created) = Backend.objects.get_or_create(name="test_backend")
+        (self.connection, created) = Connection.objects.get_or_create(backend=self.backend, identity='2067799294')
+
+        (self.backend2, created) = Backend.objects.get_or_create(name="test_backend2")
+        (self.connection2, created) = Connection.objects.get_or_create(backend=self.backend2, identity='2067799291')
+        settings.SMS_APPS = []
+
+    def tearDown(self):
+        settings.ROUTER_URL = None
+
+    def testNoRouterURL(self):
+        # send something off
+        router = get_router()
+
+        # tests that messages are correctly build
+        msg1 = router.add_outgoing(self.connection, "test")
+
+        # sleep a teeny bit to let it send
+        self.assertEquals('test_backend', msg1.connection.backend.name)
+        self.assertEquals('2067799294', msg1.connection.identity)
+        self.assertEquals('test', msg1.text)
+        self.assertEquals('O', msg1.direction)
+        self.assertEquals('Q', msg1.status)
+
+    def testSimpleRouterURL(self):
+        # set our router URL
+        settings.ROUTER_URL = "http://mykannel.com/cgi-bin/sendsms?from=1234&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&id=%(id)s"
+
+        # monkey patch the router's fetch_url request
+        def test_fetch_url(self, url):
+            test_fetch_url.url = url
+            return 200
+
+        HttpRouterThread.fetch_url = test_fetch_url
+        router = get_router()
+        msg1 = router.add_outgoing(self.connection, "test")
+
+        # sleep to let our sending thread take care of things
+        # TODO: this is pretty fragile but good enough for now
+        time.sleep(2)
+        msg1 = Message.objects.get(id=msg1.id)
+        
+        self.assertEquals('O', msg1.direction)
+        self.assertEquals('S', msg1.status)
+
+        # check whether our url was set right
+        self.assertEquals("http://mykannel.com/cgi-bin/sendsms?from=1234&text=test&to=2067799294&smsc=test_backend&id=%d" % msg1.id, test_fetch_url.url)
+
+    def testRouterDictURL(self):
+        # set our router URL
+        settings.ROUTER_URL = {
+            "default" : "http://mykannel.com/cgi-bin/sendsms?from=1234&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&id=%(id)s",
+            "test_backend2" : "http://mykannel2.com/cgi-bin/sendsms?from=1234&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&id=%(id)s"
+        }
+
+        # monkey patch the router's fetch_url request
+        def test_fetch_url(self, url):
+            test_fetch_url.url = url
+            return 200
+
+        HttpRouterThread.fetch_url = test_fetch_url
+        router = get_router()
+
+        msg1 = router.add_outgoing(self.connection, "test")
+
+        # sleep to let our sending thread take care of things
+        # TODO: this is pretty fragile but good enough for now
+        time.sleep(2)
+        msg1 = Message.objects.get(id=msg1.id)
+        
+        self.assertEquals('O', msg1.direction)
+        self.assertEquals('S', msg1.status)
+
+        # check whether our url was set right
+        self.assertEquals("http://mykannel.com/cgi-bin/sendsms?from=1234&text=test&to=2067799294&smsc=test_backend&id=%d" % msg1.id, test_fetch_url.url)
+
+        # now send to our other backend
+        msg2 = router.add_outgoing(self.connection2, "test2")
+
+        # sleep to let our sending thread take care of things
+        # TODO: this is pretty fragile but good enough for now
+        time.sleep(2)
+        msg2 = Message.objects.get(id=msg2.id)
+        
+        self.assertEquals('O', msg2.direction)
+        self.assertEquals('S', msg2.status)
+
+        # check whether our url was set right again
+        self.assertEquals("http://mykannel2.com/cgi-bin/sendsms?from=1234&text=test2&to=2067799291&smsc=test_backend2&id=%d" % msg2.id, test_fetch_url.url)
 
 class RouterTest(TestCase):
 
@@ -48,7 +141,7 @@ class RouterTest(TestCase):
         # allow letters, maybe shortcodes are using mappings to numbers
         msg4 = router.add_message('test', 'asdfASDF', 'test', 'I', 'P')
         self.assertEquals('asdfasdf', msg4.connection.identity)
-        
+
     def testRouter(self):
         router = get_router()
 
