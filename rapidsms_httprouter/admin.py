@@ -27,17 +27,12 @@ class MessageAdmin(admin.ModelAdmin):
 
         return HttpResponseRedirect(reverse('admin:rapidsms_httprouter_message_changelist'))
 
-    def changelist_view(self, request, extra_content=None):
-        return super(MessageAdmin, self).changelist_view(request, dict(title="Messages"))
-
-    def has_add_permission(self, request, obj=None):
-        return request.user.is_superuser
-
-    def has_change_permission(self, request, obj=None):
-        return request.user.is_superuser
-
-    def has_delete_permission(self, request, obj=None):
-        return request.user.is_superuser
+    def changelist_view(self, request, extra_context=None):
+        if not extra_context:
+            extra_context = dict()
+        extra_context['title'] = "Messages"
+        
+        return super(MessageAdmin, self).changelist_view(request, extra_context)
 
     def identity(self, obj):
         return "<a href='?connection=%s&q=%s'>%s</a>" % (obj.connection.id, obj.connection.identity, obj.connection.identity)
