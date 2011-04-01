@@ -1,0 +1,15 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools %}
+    {{ block.super }}
+<div id="message-tester">
+  Message Tester
+  <form method="POST" action="{% url admin:rapidsms_httprouter_message_send %}">
+    <input type="text" name="sender" size=15 value="2067799294"></input>
+    <input type="text" name="text" size=80></input>
+    <input type="hidden" name="backend" value="console" >
+    {% csrf_token %}
+    <input type="submit" value="send">
+  </form>
+</div>
+{% endblock %}

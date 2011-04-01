@@ -29,7 +29,7 @@ class Message(models.Model):
     status     = models.CharField(max_length=1, choices=STATUS_CHOICES)
     date       = models.DateTimeField(auto_now_add=True)
 
-    in_response_to = models.ForeignKey('self', related_name='responses', null=True)
+    in_response_to = models.ForeignKey('self', related_name='responses', null=True, blank=True)
 
     def __unicode__(self):
         # crop the text (to avoid exploding the admin)
@@ -44,3 +44,4 @@ class Message(models.Model):
                     contact=self.connection.identity, backend=self.connection.backend.name,
                     direction=self.direction, status=self.status, text=self.text,
                     date=self.date.isoformat())
+

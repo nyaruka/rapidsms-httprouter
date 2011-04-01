@@ -1,0 +1,27 @@
+
+#result_list td.text {
+    width: 100%;
+}
+
+#result_list td.sms_dir .I {
+    background-image: url(../in.png);
+    background-repeat: no-repeat;
+    width: 10px;
+    height: 15px;
+}
+
+#result_list td.sms_dir .O {
+    background-image: url(../out.png);
+    background-repeat: no-repeat;
+    width: 10px;
+    height: 15px;
+}
+
+#message-tester {
+    padding: 3px;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    background: #e1e1e1 url(../nav-bg.gif) top left repeat-x;
+    color: #666;
+}
