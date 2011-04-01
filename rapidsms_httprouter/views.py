@@ -5,6 +5,7 @@ from django.http import HttpResponse
 from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.conf import settings;
+from django.db.models import Q
 
 from rapidsms.messages.incoming import IncomingMessage
 from rapidsms.messages.outgoing import OutgoingMessage
@@ -119,6 +120,9 @@ class ReplyForm(forms.Form):
     recipient = forms.CharField(max_length=20)
     message = forms.CharField(max_length=160, widget=forms.TextInput(attrs={'size':'60'}))
 
+class SearchForm(forms.Form):
+    search = forms.CharField(label="Keywords", max_length=100, widget=forms.TextInput(attrs={'size':'60'}), required=False)    
+
 def console(request):
     """
     Our web console, lets you see recent messages as well as send out new ones for
@@ -126,6 +130,10 @@ def console(request):
     """
     form = SendForm()
     reply_form = ReplyForm()
+    search_form = SearchForm()
+
+    queryset = Message.objects.all()
+    
     if request.method == 'POST':
         if request.POST['action'] == 'test':
             form = SendForm(request.POST)
@@ -146,13 +154,28 @@ def console(request):
                     get_router().handle_outgoing(outgoing)
                 else:
                     reply_form.errors.setdefault('short_description', ErrorList())
-                    reply_form.errors['recipient'].append("This number isn't in the system")                    
+                    reply_form.errors['recipient'].append("This number isn't in the system")
+
+        elif request.POST['action'] == 'search':
+            # split on spaces
+            search_form = SearchForm(request.POST)
+            if search_form.is_valid():
+                terms = search_form.cleaned_data['search'].split()
+
+                if terms:
+                    term = terms[0]
+                    query = (Q(text__icontains=term) | Q(in_response_to__text__icontains=term) | Q(connection__identity__icontains=term))
+                    for term in terms[1:]:
+                        query &= (Q(text__icontains=term) | Q(in_response_to__text__icontains=term) | Q(connection__identity__icontains=term))
+
+                    queryset = queryset.filter(query)
 
     return render_to_response(
         "router/index.html", {
-            "messages_table": MessageTable(Message.objects.all(), request=request),
+            "messages_table": MessageTable(queryset, request=request),
             "form": form,
-            "reply_form": reply_form
+            "reply_form": reply_form,
+            "search_form": search_form,
         }, context_instance=RequestContext(request)
     )
 
