@@ -62,13 +62,14 @@ class HttpRouterThread(Thread, LoggerMixin):
                 transaction.enter_transaction_management()
 
                 try:
-                    # without this, our to_process list gets cached
-                    transaction.commit()
-
                     # this gets any outgoing messages which are either pending or queued, excluding those
                     # which are already being processed
                     to_process = Message.objects.filter(direction='O',
                                                         status__in=['P','Q']).order_by('status').exclude(pk__in=outgoing_pk_queue)
+
+                    if to_process or outgoing_pk_queue:
+                        self.debug("to process: %s" % to_process)
+                        self.debug("outgoing_queue: %s" % outgoing_pk_queue)
 
                     if to_process.count():
                         self._isbusy = True
@@ -82,6 +83,9 @@ class HttpRouterThread(Thread, LoggerMixin):
                         # if it wasn't cancelled, send it off
                         if send_msg:
                             self.send_message(outgoing_message)
+
+                        # without this, our to_process list gets cached
+                        transaction.commit()
 
                         outgoing_queue_lock.acquire()
                         outgoing_pk_queue.remove(outgoing_message.pk)
@@ -149,7 +153,9 @@ class HttpRouterThread(Thread, LoggerMixin):
                 raise Exception("No router url mapping found for backend '%s', check your settings.ROUTER_URL setting" % backend_name)
 
         # return our built up url with all our variables substituted in
-        return router_url % params
+        full_url = router_url % params
+
+        return full_url
 
     def send_message(self, msg, **kwargs):
         """
