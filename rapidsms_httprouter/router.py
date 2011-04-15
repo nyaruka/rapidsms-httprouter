@@ -62,6 +62,9 @@ class HttpRouterThread(Thread, LoggerMixin):
                 transaction.enter_transaction_management()
 
                 try:
+                    # without this, our to_process list gets cached
+                    transaction.commit()
+
                     # this gets any outgoing messages which are either pending or queued, excluding those
                     # which are already being processed
                     to_process = Message.objects.filter(direction='O',
@@ -83,9 +86,6 @@ class HttpRouterThread(Thread, LoggerMixin):
                         # if it wasn't cancelled, send it off
                         if send_msg:
                             self.send_message(outgoing_message)
-
-                        # without this, our to_process list gets cached
-                        transaction.commit()
 
                         outgoing_queue_lock.acquire()
                         outgoing_pk_queue.remove(outgoing_message.pk)
