@@ -85,8 +85,7 @@ class HttpRouterThread(Thread, LoggerMixin):
         """
         Wrapper around url open, mostly here so we can monkey patch over it in unit tests.
         """
-        # FIXME: clean this up
-        response = urlopen(url)
+        response = urlopen(url, timeout=15)
         return response.getcode()
 
     def build_send_url(self, msg, kwargs):
@@ -131,7 +130,9 @@ class HttpRouterThread(Thread, LoggerMixin):
                 raise Exception("No router url mapping found for backend '%s', check your settings.ROUTER_URL setting" % backend_name)
 
         # return our built up url with all our variables substituted in
-        return router_url % params
+        full_url = router_url % params
+
+        return full_url
 
     def send_message(self, msg, **kwargs):
         """

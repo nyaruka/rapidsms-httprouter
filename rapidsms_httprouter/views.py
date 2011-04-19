@@ -6,6 +6,7 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response
 from django.conf import settings;
 from django.db.models import Q
+from django.core.paginator import *
 
 from rapidsms.messages.incoming import IncomingMessage
 from rapidsms.messages.outgoing import OutgoingMessage
@@ -170,12 +171,24 @@ def console(request):
 
                     queryset = queryset.filter(query)
 
+    paginator = Paginator(queryset.order_by('-id'), 20)
+    page = request.GET.get('page')
+    try:
+        messages = paginator.page(page)
+    except EmptyPage:
+        # If page is out of range (e.g. 9999), deliver last page of results.
+        messages = paginator.page(paginator.num_pages)
+    except:
+        # None or not an integer, default to first page
+        messages = paginator.page(1)
+
     return render_to_response(
         "router/index.html", {
             "messages_table": MessageTable(queryset, request=request),
             "form": form,
             "reply_form": reply_form,
             "search_form": search_form,
+            "messages": messages
         }, context_instance=RequestContext(request)
     )
 
