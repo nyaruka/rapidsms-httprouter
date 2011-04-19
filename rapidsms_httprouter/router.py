@@ -13,12 +13,6 @@ from urllib2 import urlopen
 import time
 import re
 
-# we keep a list of all the messages currently being processed here
-outgoing_pk_queue = []
-
-# our lock for that queue
-outgoing_queue_lock = Lock()
-
 # we make sure only one thread is modifying db messages a time
 outgoing_db_lock = Lock()
 
@@ -51,30 +45,28 @@ class HttpRouterThread(Thread, LoggerMixin):
         return self._isbusy
 
     def run(self):
-        global outgoing_pk_queue
-        global outgoing_queue_lock
-        global outgoing_db_lock
         global sending_mass_messages
         
         while self.is_alive():
             if not sending_mass_messages:
-                outgoing_queue_lock.acquire()
                 transaction.enter_transaction_management()
 
                 try:
                     # without this, our to_process list gets cached
                     transaction.commit()
 
-                    # this gets any outgoing messages which are either pending or queued, excluding those
-                    # which are already being processed
-                    to_process = Message.objects.filter(direction='O',
-                                                        status__in=['P','Q']).order_by('status').exclude(pk__in=outgoing_pk_queue)
+                    # this gets any outgoing messages which are either pending or queued
+                    to_process = list(Message.objects.filter(direction='O',
+                                                             status__in=['P','Q']).order_by('status').for_single_update())
 
-                    if to_process.count():
+                    if len(to_process):
                         self._isbusy = True
                         outgoing_message = to_process[0]
-                        outgoing_pk_queue.append(outgoing_message.pk)
-                        outgoing_queue_lock.release()
+                        outgoing_message.status = 'L'
+                        outgoing_message.save()
+
+                        # frees our update lock
+                        transaction.commit()                        
 
                         # process the outgoing phases for this message
                         send_msg = get_router().process_outgoing_phases(outgoing_message)
@@ -82,20 +74,10 @@ class HttpRouterThread(Thread, LoggerMixin):
                         # if it wasn't cancelled, send it off
                         if send_msg:
                             self.send_message(outgoing_message)
-
-                        outgoing_queue_lock.acquire()
-                        outgoing_pk_queue.remove(outgoing_message.pk)
-                        outgoing_queue_lock.release()
                 except:
                     import traceback
                     traceback.print_exc()
-                        
-                finally:
-                    try:
-                        outgoing_queue_lock.release()
-                    except:
-                        # it's ok, it wasn't locked
-                        pass
+
             self._isbusy = False
             time.sleep(0.5)
 
