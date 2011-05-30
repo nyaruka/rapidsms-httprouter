@@ -46,15 +46,12 @@ class HttpRouterThread(Thread, LoggerMixin):
 
     def run(self):
         global sending_mass_messages
-        
+
         while self.is_alive():
             if not sending_mass_messages:
                 transaction.enter_transaction_management()
 
                 try:
-                    # without this, our to_process list gets cached
-                    transaction.commit()
-
                     # this gets any outgoing messages which are either pending or queued
                     to_process = list(Message.objects.filter(direction='O',
                                                              status__in=['P','Q']).order_by('status').for_single_update())
@@ -77,6 +74,12 @@ class HttpRouterThread(Thread, LoggerMixin):
                 except:
                     import traceback
                     traceback.print_exc()
+
+                finally:
+                    try:
+                        transaction.commit()
+                    except:
+                        pass
 
             self._isbusy = False
             time.sleep(0.5)
@@ -208,12 +211,13 @@ class HttpRouter(object, LoggerMixin):
 
         # finally, create our db message
         outgoing_db_lock.acquire()
+
         message = Message.objects.create(connection=connection,
                                          text=text,
                                          direction=direction,
                                          status=status)
         outgoing_db_lock.release()
-        
+
         return message
 
 
