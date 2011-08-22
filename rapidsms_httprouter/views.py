@@ -188,7 +188,7 @@ def console(request):
             "form": form,
             "reply_form": reply_form,
             "search_form": search_form,
-            "messages": messages
+            "sms_messages": messages
         }, context_instance=RequestContext(request)
     )
 
