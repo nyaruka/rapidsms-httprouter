@@ -40,6 +40,9 @@ class MessageForm(SecureForm):
     message = forms.CharField(max_length=160)
     echo = forms.BooleanField(required=False)
 
+class OutboxForm(SecureForm):
+    backend = forms.CharField(max_length=32, required=False)
+
 def receive(request):
     """
     Takes the passed in message.  Creates a record for it, and passes it through
@@ -71,13 +74,18 @@ def outbox(request):
     Returns any messages which have been queued to be sent but have no yet been marked
     as being delivered.
     """
-    form = SecureForm(request.GET)
+    form = OutboxForm(request.GET)
     if not form.is_valid():
         return HttpResponse(str(form.errors), status=400)        
     
+    data = form.cleaned_data
+    pending_messages = Message.objects.filter(status='Q')
+    if 'backend' in data and data['backend']:
+        pending_messages = pending_messages.filter(connection__backend__name__iexact=data['backend'])
+    
     response = {}
     messages = []
-    for message in Message.objects.filter(status='Q'):
+    for message in pending_messages:
         messages.append(message.as_json())
 
     response['outbox'] = messages
