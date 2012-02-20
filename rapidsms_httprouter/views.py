@@ -136,7 +136,7 @@ def console(request):
     queryset = Message.objects.all()
     
     if request.method == 'POST':
-        if request.POST['action'] == 'test':
+        if request.REQUEST['action'] == 'test':
             form = SendForm(request.POST)
             if form.is_valid():
                 backend = "console"
@@ -145,7 +145,7 @@ def console(request):
                                                        form.cleaned_data['text'])
             reply_form = ReplyForm()
             
-        elif request.POST['action'] == 'reply':
+        elif request.REQUEST['action'] == 'reply':
             reply_form = ReplyForm(request.POST)
             if reply_form.is_valid():
                 if Connection.objects.filter(identity=reply_form.cleaned_data['recipient']).count():
@@ -157,9 +157,9 @@ def console(request):
                     reply_form.errors.setdefault('short_description', ErrorList())
                     reply_form.errors['recipient'].append("This number isn't in the system")
 
-        elif request.POST['action'] == 'search':
+        elif request.REQUEST['action'] == 'search':
             # split on spaces
-            search_form = SearchForm(request.POST)
+            search_form = SearchForm(request.REQUEST)
             if search_form.is_valid():
                 terms = search_form.cleaned_data['search'].split()
 
@@ -172,7 +172,7 @@ def console(request):
                     queryset = queryset.filter(query)
 
     paginator = Paginator(queryset.order_by('-id'), 20)
-    page = request.GET.get('page')
+    page = request.REQUEST.get('page')
     try:
         messages = paginator.page(page)
     except EmptyPage:
