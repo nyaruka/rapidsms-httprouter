@@ -78,7 +78,7 @@ def relaylog(request):
     """
     password = getattr(settings, "ROUTER_PASSWORD", None)
 
-    if 'log' in request.REQUEST and 'password' in request.REQUEST and request.REQUEST['password'] == password:
+    if request.method == 'POST' and 'log' in request.REQUEST and 'password' in request.REQUEST and request.REQUEST['password'] == password:
         send_mail('Relay Log', 
                   request.REQUEST['log'], 'code@nyaruka.com',
                   [admin[1] for admin in settings.ADMINS], fail_silently=False)
