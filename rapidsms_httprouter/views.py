@@ -14,6 +14,8 @@ from rapidsms.models import Connection
 from djtables import Table, Column
 from djtables.column import DateColumn
 
+from django.core.mail import send_mail
+
 from .models import Message
 from .router import get_router
 
@@ -68,6 +70,22 @@ def receive(request):
         return HttpResponse()
     else:
         return HttpResponse(json.dumps(response))
+
+def relaylog(request):
+    """
+    Used by relay apps to send a log of their status.  The send in log is forwarded by email to the
+    system administrators.
+    """
+    password = getattr(settings, "ROUTER_PASSWORD", None)
+
+    if 'log' in request.REQUEST and 'password' in request.REQUEST and request.REQUEST['password'] == password:
+        send_mail('Relay Log', 
+                  request.REQUEST['log'], 'code@nyaruka.com',
+                  [admin[1] for admin in settings.ADMINS], fail_silently=False)
+
+        return HttpResponse("Log Sent")
+    else:
+        return HttpResponse("Must be POST of [log, password]")
 
 def outbox(request):
     """
