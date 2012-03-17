@@ -268,6 +268,20 @@ class ViewTest(TestCase):
     def tearDown(self):
         get_router().apps = []
 
+    def testEmptyMessage(self):
+        import json
+
+        # send a message
+        response = self.client.get("/router/receive?backend=test_backend&sender=2067799294&message=")
+        self.assertEquals(200, response.status_code)
+        message = json.loads(response.content)['message']
+
+        # basic validation that the message was handled
+        self.assertEquals("I", message['direction'])
+        self.assertEquals("H", message['status'])
+        self.assertEquals("test_backend", message['backend'])
+        self.assertEquals("2067799294", message['contact'])
+        self.assertEquals("", message['text'])        
 
     def testViews(self):
         import json
