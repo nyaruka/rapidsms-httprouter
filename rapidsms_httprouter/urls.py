@@ -2,7 +2,7 @@
 # vim: ai ts=4 sts=4 et sw=4
 
 from django.conf.urls.defaults import *
-from .views import receive, outbox, delivered, console, relaylog
+from .views import receive, outbox, delivered, console, relaylog, alert
 from django.contrib.admin.views.decorators import staff_member_required
 
 urlpatterns = patterns("",

@@ -72,7 +72,7 @@ def receive(request):
     else:
         return HttpResponse(json.dumps(response))
 
-@csrf_exempt()
+@csrf_exempt
 def relaylog(request):
     """
     Used by relay apps to send a log of their status.  The send in log is forwarded by email to the
@@ -91,7 +91,7 @@ def relaylog(request):
     else:
         return HttpResponse("Must be POST of [log, password]", status=400)
 
-@csrf_exempt()
+@csrf_exempt
 def alert(request):
     """
     Used by relay apps to send email alerts or messages to administrators.
@@ -105,7 +105,7 @@ def alert(request):
 
         return HttpResponse("Log Sent")
     else:
-        return HttpResponse("Must be POST containing subject, body and password params")
+        return HttpResponse("Must be POST containing subject, body and password params", status=400)
 
 def outbox(request):
     """
