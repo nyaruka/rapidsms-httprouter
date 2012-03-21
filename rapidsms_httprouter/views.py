@@ -7,6 +7,7 @@ from django.shortcuts import render_to_response
 from django.conf import settings;
 from django.db.models import Q
 from django.core.paginator import *
+from django.views.decorators.csrf import csrf_exempt
 
 from rapidsms.messages.incoming import IncomingMessage
 from rapidsms.messages.outgoing import OutgoingMessage
@@ -71,10 +72,13 @@ def receive(request):
     else:
         return HttpResponse(json.dumps(response))
 
+@csrf_exempt()
 def relaylog(request):
     """
     Used by relay apps to send a log of their status.  The send in log is forwarded by email to the
     system administrators.
+
+    DEPRECATED: should be replaced with alert calls below
     """
     password = getattr(settings, "ROUTER_PASSWORD", None)
 
@@ -85,7 +89,23 @@ def relaylog(request):
 
         return HttpResponse("Log Sent")
     else:
-        return HttpResponse("Must be POST of [log, password]")
+        return HttpResponse("Must be POST of [log, password]", status=400)
+
+@csrf_exempt()
+def alert(request):
+    """
+    Used by relay apps to send email alerts or messages to administrators.
+    """
+    password = getattr(settings, "ROUTER_PASSWORD", None)
+
+    if request.method == 'POST' and 'body' in request.REQUEST and 'subject' in request.REQUEST and 'password' in request.REQUEST and request.REQUEST['password'] == password:
+        send_mail(request.REQUEST['subject'], 
+                  request.REQUEST['body'], 'code@nyaruka.com',
+                  [admin[1] for admin in settings.ADMINS], fail_silently=False)
+
+        return HttpResponse("Log Sent")
+    else:
+        return HttpResponse("Must be POST containing subject, body and password params")
 
 def outbox(request):
     """

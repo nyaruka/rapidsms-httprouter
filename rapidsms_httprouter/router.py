@@ -212,6 +212,9 @@ class HttpRouter(object, LoggerMixin):
         # finally, create our db message
         outgoing_db_lock.acquire()
 
+        # force to unicode
+        text = unicode(text)
+
         message = Message.objects.create(connection=connection,
                                          text=text,
                                          direction=direction,
