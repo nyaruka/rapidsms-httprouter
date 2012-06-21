@@ -98,7 +98,7 @@ def alert(request):
     """
     password = getattr(settings, "ROUTER_PASSWORD", None)
 
-    if request.method == 'POST' and 'body' in request.REQUEST and 'subject' in request.REQUEST and 'password' in request.REQUEST and request.REQUEST['password'] == password:
+    if request.method == 'POST' and 'body' in request.REQUEST and 'subject' in request.REQUEST and (not password or ('password' in request.REQUEST and request.REQUEST['password'] == password):
         send_mail(request.REQUEST['subject'], 
                   request.REQUEST['body'], 'code@nyaruka.com',
                   [admin[1] for admin in settings.ADMINS], fail_silently=False)
