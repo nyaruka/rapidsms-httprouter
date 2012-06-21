@@ -98,12 +98,15 @@ def alert(request):
     """
     password = getattr(settings, "ROUTER_PASSWORD", None)
 
-    if request.method == 'POST' and 'body' in request.REQUEST and 'subject' in request.REQUEST and (not password or ('password' in request.REQUEST and request.REQUEST['password'] == password):
-        send_mail(request.REQUEST['subject'], 
-                  request.REQUEST['body'], 'code@nyaruka.com',
-                  [admin[1] for admin in settings.ADMINS], fail_silently=False)
+    if request.method == 'POST' and 'body' in request.REQUEST and 'subject' in request.REQUEST:
+        if not password or request.REQUEST.get('password', None) == password:
+            send_mail(request.REQUEST['subject'], 
+                      request.REQUEST['body'], 'code@nyaruka.com',
+                      [admin[1] for admin in settings.ADMINS], fail_silently=False)
 
-        return HttpResponse("Log Sent")
+            return HttpResponse("Log Sent")
+        else:
+            return HttpResponse("Incorrect password.")
     else:
         return HttpResponse("Must be POST containing subject, body and password params", status=400)
 
