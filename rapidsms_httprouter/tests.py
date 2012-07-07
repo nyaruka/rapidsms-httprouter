@@ -13,9 +13,9 @@ from .models import Message
 
 from rapidsms.models import Backend, Connection
 from rapidsms.apps.base import AppBase
-from rapidsms.messages.incoming import IncomingMessage
 from rapidsms.messages.outgoing import OutgoingMessage
 from django.conf import settings
+
 
 class BackendTest(TransactionTestCase):
 
@@ -61,7 +61,7 @@ class BackendTest(TransactionTestCase):
         # TODO: this is pretty fragile but good enough for now
         time.sleep(2)
         msg1 = Message.objects.get(id=msg1.id)
-        
+
         self.assertEquals('O', msg1.direction)
         self.assertEquals('S', msg1.status)
 
@@ -71,8 +71,8 @@ class BackendTest(TransactionTestCase):
     def testRouterDictURL(self):
         # set our router URL
         settings.ROUTER_URL = {
-            "default" : "http://mykannel.com/cgi-bin/sendsms?from=1234&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&id=%(id)s",
-            "test_backend2" : "http://mykannel2.com/cgi-bin/sendsms?from=1234&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&id=%(id)s"
+            "default": "http://mykannel.com/cgi-bin/sendsms?from=1234&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&id=%(id)s",
+            "test_backend2": "http://mykannel2.com/cgi-bin/sendsms?from=1234&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&id=%(id)s"
         }
 
         # monkey patch the router's fetch_url request
@@ -89,7 +89,7 @@ class BackendTest(TransactionTestCase):
         # TODO: this is pretty fragile but good enough for now
         time.sleep(2)
         msg1 = Message.objects.get(id=msg1.id)
-        
+
         self.assertEquals('O', msg1.direction)
         self.assertEquals('S', msg1.status)
 
@@ -103,12 +103,13 @@ class BackendTest(TransactionTestCase):
         # TODO: this is pretty fragile but good enough for now
         time.sleep(2)
         msg2 = Message.objects.get(id=msg2.id)
-        
+
         self.assertEquals('O', msg2.direction)
         self.assertEquals('S', msg2.status)
 
         # check whether our url was set right again
         self.assertEquals("http://mykannel2.com/cgi-bin/sendsms?from=1234&text=test2&to=2067799291&smsc=test_backend2&id=%d" % msg2.id, test_fetch_url.url)
+
 
 class RouterTest(TestCase):
 
@@ -199,7 +200,6 @@ class RouterTest(TestCase):
         finally:
             router.apps = []
 
-
     def testAppReply(self):
         router = get_router()
 
@@ -250,6 +250,7 @@ class RouterTest(TestCase):
         finally:
             router.apps = []
 
+
 class ViewTest(TestCase):
 
     def setUp(self):
@@ -281,11 +282,11 @@ class ViewTest(TestCase):
         self.assertEquals("H", message['status'])
         self.assertEquals("test_backend", message['backend'])
         self.assertEquals("2067799294", message['contact'])
-        self.assertEquals("", message['text'])        
+        self.assertEquals("", message['text'])
 
     def testViews(self):
         import json
-        
+
         response = self.client.get("/router/outbox")
         outbox = json.loads(response.content)
 
@@ -317,7 +318,7 @@ class ViewTest(TestCase):
         self.assertEquals(1, len(outbox['outbox']))
 
         message = outbox['outbox'][0]
-        
+
         self.assertEquals("O", message['direction'])
         self.assertEquals("Q", message['status'])
         self.assertEquals("test_backend", message['backend'])
@@ -326,7 +327,7 @@ class ViewTest(TestCase):
 
         # test sending errant delivery report
         response = self.client.get("/router/delivered")
-        self.assertEquals(400, response.status_code)        
+        self.assertEquals(400, response.status_code)
 
         # mark the message as delivered
         response = self.client.get("/router/delivered?message_id=" + str(message['id']))
@@ -336,12 +337,15 @@ class ViewTest(TestCase):
         db_message = Message.objects.get(pk=message['id'])
         self.assertEquals('D', db_message.status)
 
+        # test to ensure the message is updated with a time in the future for
+        # message delivery
+        self.assertTrue(db_message.updated > db_message.date)
+
         # and that our outbox is now empty
         response = self.client.get("/router/outbox")
         outbox = json.loads(response.content)
 
         self.assertEquals(0, len(outbox['outbox']))
-
 
     def testSecurity(self):
         try:
@@ -371,7 +375,7 @@ class ViewTest(TestCase):
             self.assertEquals(200, response.status_code)
 
             # now we have one new incoming message and one new outgoing message
-            self.assertEquals(msg_count+2, Message.objects.all().count())
+            self.assertEquals(msg_count + 2, Message.objects.all().count())
 
             # grab the last message and let's test the delivery report
             message = Message.objects.filter(direction='O').order_by('-id')[0]
@@ -389,8 +393,3 @@ class ViewTest(TestCase):
             self.assertEquals('D', message.status)
         finally:
             settings.ROUTER_PASSWORD = None
-    
-
-        
-    
-    
