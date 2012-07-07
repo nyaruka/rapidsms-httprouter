@@ -88,7 +88,7 @@ def relaylog(request):
 
     if request.method == 'POST' and 'log' in request.REQUEST and 'password' in request.REQUEST and request.REQUEST['password'] == password:
         send_mail('Relay Log',
-                  request.REQUEST['log'], 'code@nyaruka.com',
+                  request.REQUEST['log'], settings.DEFAULT_FROM_EMAIL,
                   [admin[1] for admin in settings.ADMINS], fail_silently=False)
 
         return HttpResponse("Log Sent")
@@ -106,7 +106,7 @@ def alert(request):
     if request.method == 'POST' and 'body' in request.REQUEST and 'subject' in request.REQUEST:
         if not password or request.REQUEST.get('password', None) == password:
             send_mail(request.REQUEST['subject'],
-                      request.REQUEST['body'], 'code@nyaruka.com',
+                      request.REQUEST['body'], settings.DEFAULT_FROM_EMAIL,
                       [admin[1] for admin in settings.ADMINS], fail_silently=False)
 
             return HttpResponse("Log Sent")
