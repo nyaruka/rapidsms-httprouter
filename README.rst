@@ -35,7 +35,7 @@ The HTTP Router app replaces most of the functionality provided by these package
 Installation From Cheese Shop
 =============================
 
-You can install the latest version of the rapidsms-xforms library straight from the cheese shop::
+You can install the latest version of the rapidsms-httprouter library straight from the cheese shop::
 
    % pip install rapidsms-httprouter
 

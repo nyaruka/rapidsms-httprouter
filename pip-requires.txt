@@ -1,2 +1,2 @@
 rapidsms==0.96a
-
+South==0.7.5
