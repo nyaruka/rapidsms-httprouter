@@ -47,6 +47,14 @@ class HttpRouterThread(Thread, LoggerMixin):
     def run(self):
         global sending_mass_messages
 
+        # exclude any backends that do not have a router url set
+        excluded_backends = []
+        if not settings.ROUTER_URL is None:
+            if type(settings.ROUTER_URL) is dict:
+                for backend in settings.ROUTER_URL.keys():
+                    if settings.ROUTER_URL[backend] is None:
+                        excluded_backends.append(backend)
+
         while self.is_alive():
             if not sending_mass_messages:
                 transaction.enter_transaction_management()
@@ -54,7 +62,7 @@ class HttpRouterThread(Thread, LoggerMixin):
                 try:
                     # this gets any outgoing messages which are either pending or queued
                     to_process = list(Message.objects.filter(direction='O',
-                                                             status__in=['P','Q']).order_by('status').for_single_update())
+                                                             status__in=['P','Q']).order_by('status').exclude(connection__backend__name__in=excluded_backends).for_single_update())
 
                     if len(to_process):
                         self._isbusy = True
