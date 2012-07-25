@@ -7,6 +7,7 @@ setup(
 
     install_requires = [
         "rapidsms==0.9.6a",
+        "South==0.7.5",
     ],
 
     description='Provides HTTP endpoints for a RapidSMS router, doing all handling in the Django thread.',

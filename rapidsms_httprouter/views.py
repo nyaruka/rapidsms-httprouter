@@ -4,12 +4,11 @@ from django import forms
 from django.http import HttpResponse
 from django.template import RequestContext
 from django.shortcuts import render_to_response
-from django.conf import settings;
+from django.conf import settings
 from django.db.models import Q
 from django.core.paginator import *
 from django.views.decorators.csrf import csrf_exempt
 
-from rapidsms.messages.incoming import IncomingMessage
 from rapidsms.messages.outgoing import OutgoingMessage
 from rapidsms.models import Connection
 from djtables import Table, Column
@@ -19,6 +18,7 @@ from django.core.mail import send_mail
 
 from .models import Message
 from .router import get_router
+
 
 class SecureForm(forms.Form):
     """
@@ -37,14 +37,17 @@ class SecureForm(forms.Form):
 
         return self.cleaned_data
 
+
 class MessageForm(SecureForm):
     backend = forms.CharField(max_length=32)
     sender = forms.CharField(max_length=20)
     message = forms.CharField(max_length=160, required=False)
     echo = forms.BooleanField(required=False)
 
+
 class OutboxForm(SecureForm):
     backend = forms.CharField(max_length=32, required=False)
+
 
 def receive(request):
     """
@@ -52,7 +55,7 @@ def receive(request):
     all the rapidsms applications for processing.
     """
     form = MessageForm(request.GET)
-    
+
     # missing fields, fail
     if not form.is_valid():
         return HttpResponse(str(form.errors), status=400)
@@ -72,6 +75,7 @@ def receive(request):
     else:
         return HttpResponse(json.dumps(response))
 
+
 @csrf_exempt
 def relaylog(request):
     """
@@ -83,13 +87,14 @@ def relaylog(request):
     password = getattr(settings, "ROUTER_PASSWORD", None)
 
     if request.method == 'POST' and 'log' in request.REQUEST and 'password' in request.REQUEST and request.REQUEST['password'] == password:
-        send_mail('Relay Log', 
-                  request.REQUEST['log'], 'code@nyaruka.com',
+        send_mail('Relay Log',
+                  request.REQUEST['log'], settings.DEFAULT_FROM_EMAIL,
                   [admin[1] for admin in settings.ADMINS], fail_silently=False)
 
         return HttpResponse("Log Sent")
     else:
         return HttpResponse("Must be POST of [log, password]", status=400)
+
 
 @csrf_exempt
 def alert(request):
@@ -100,8 +105,8 @@ def alert(request):
 
     if request.method == 'POST' and 'body' in request.REQUEST and 'subject' in request.REQUEST:
         if not password or request.REQUEST.get('password', None) == password:
-            send_mail(request.REQUEST['subject'], 
-                      request.REQUEST['body'], 'code@nyaruka.com',
+            send_mail(request.REQUEST['subject'],
+                      request.REQUEST['body'], settings.DEFAULT_FROM_EMAIL,
                       [admin[1] for admin in settings.ADMINS], fail_silently=False)
 
             return HttpResponse("Log Sent")
@@ -110,6 +115,7 @@ def alert(request):
     else:
         return HttpResponse("Must be POST containing subject, body and password params", status=400)
 
+
 def outbox(request):
     """
     Returns any messages which have been queued to be sent but have no yet been marked
@@ -117,13 +123,13 @@ def outbox(request):
     """
     form = OutboxForm(request.GET)
     if not form.is_valid():
-        return HttpResponse(str(form.errors), status=400)        
-    
+        return HttpResponse(str(form.errors), status=400)
+
     data = form.cleaned_data
     pending_messages = Message.objects.filter(status='Q')
     if 'backend' in data and data['backend']:
         pending_messages = pending_messages.filter(connection__backend__name__iexact=data['backend'])
-    
+
     response = {}
     messages = []
     for message in pending_messages:
@@ -134,15 +140,17 @@ def outbox(request):
 
     return HttpResponse(json.dumps(response))
 
+
 class DeliveredForm(SecureForm):
     message_id = forms.IntegerField()
+
 
 def delivered(request):
     """
     Called when a message is delivered by our backend.
     """
     form = DeliveredForm(request.GET)
-    
+
     if not form.is_valid():
         return HttpResponse(str(form.errors), status=400)
 
@@ -155,23 +163,27 @@ class MessageTable(Table):
     # this is temporary, until i fix ModelTable!
     text = Column()
     direction = Column()
-    connection = Column(link = lambda cell: "javascript:reply('%s')" % cell.row.connection.identity)
+    connection = Column(link=lambda cell: "javascript:reply('%s')" % cell.row.connection.identity)
     status = Column()
     date = DateColumn(format="m/d/Y H:i:s")
 
     class Meta:
         order_by = '-date'
 
+
 class SendForm(forms.Form):
     sender = forms.CharField(max_length=20, initial="12065551212")
-    text = forms.CharField(max_length=160, label="Message", widget=forms.TextInput(attrs={'size':'60'}))
+    text = forms.CharField(max_length=160, label="Message", widget=forms.TextInput(attrs={'size': '60'}))
+
 
 class ReplyForm(forms.Form):
     recipient = forms.CharField(max_length=20)
-    message = forms.CharField(max_length=160, widget=forms.TextInput(attrs={'size':'60'}))
+    message = forms.CharField(max_length=160, widget=forms.TextInput(attrs={'size': '60'}))
+
 
 class SearchForm(forms.Form):
-    search = forms.CharField(label="Keywords", max_length=100, widget=forms.TextInput(attrs={'size':'60'}), required=False)    
+    search = forms.CharField(label="Keywords", max_length=100, widget=forms.TextInput(attrs={'size': '60'}), required=False)
+
 
 def console(request):
     """
@@ -183,7 +195,7 @@ def console(request):
     search_form = SearchForm()
 
     queryset = Message.objects.all()
-    
+
     if request.method == 'POST':
         if request.REQUEST['action'] == 'test':
             form = SendForm(request.POST)
@@ -193,7 +205,7 @@ def console(request):
                                                        form.cleaned_data['sender'],
                                                        form.cleaned_data['text'])
             reply_form = ReplyForm()
-            
+
         elif request.REQUEST['action'] == 'reply':
             reply_form = ReplyForm(request.POST)
             if reply_form.is_valid():
@@ -207,18 +219,18 @@ def console(request):
                     reply_form.errors['recipient'].append("This number isn't in the system")
 
     if request.REQUEST.get('action', None) == 'search':
-         # split on spaces
-         search_form = SearchForm(request.REQUEST)
-         if search_form.is_valid():
-             terms = search_form.cleaned_data['search'].split()
+        # split on spaces
+        search_form = SearchForm(request.REQUEST)
+        if search_form.is_valid():
+            terms = search_form.cleaned_data['search'].split()
 
-             if terms:
-                 term = terms[0]
-                 query = (Q(text__icontains=term) | Q(in_response_to__text__icontains=term) | Q(connection__identity__icontains=term))
-                 for term in terms[1:]:
-                     query &= (Q(text__icontains=term) | Q(in_response_to__text__icontains=term) | Q(connection__identity__icontains=term))
+            if terms:
+                term = terms[0]
+                query = (Q(text__icontains=term) | Q(in_response_to__text__icontains=term) | Q(connection__identity__icontains=term))
+                for term in terms[1:]:
+                    query &= (Q(text__icontains=term) | Q(in_response_to__text__icontains=term) | Q(connection__identity__icontains=term))
 
-                 queryset = queryset.filter(query)
+                queryset = queryset.filter(query)
 
     paginator = Paginator(queryset.order_by('-id'), 20)
     page = request.REQUEST.get('page')
@@ -240,4 +252,3 @@ def console(request):
             "sms_messages": messages
         }, context_instance=RequestContext(request)
     )
-
