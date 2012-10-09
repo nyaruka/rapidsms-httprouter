@@ -37,17 +37,14 @@ class SecureForm(forms.Form):
 
         return self.cleaned_data
 
-
 class MessageForm(SecureForm):
     backend = forms.CharField(max_length=32)
     sender = forms.CharField(max_length=20)
     message = forms.CharField(max_length=160, required=False)
     echo = forms.BooleanField(required=False)
 
-
 class OutboxForm(SecureForm):
     backend = forms.CharField(max_length=32, required=False)
-
 
 def receive(request):
     """

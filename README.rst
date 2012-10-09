@@ -176,5 +176,42 @@ It is a good idea to have some security on who can deliver messages to your syst
 
 Any incoming requests to those endpoints will fail if it is not included.
 
+Celery & Redis
+===============
+
+HttpRouter has two dependencies if you plan on using a ROUTER_URL and not just have message queue up, Redis and Celery. (note you can use Redis as a backend for Celery)  You'll need something like the following your settings.py in order to get things working::
+
+    #-----------------------------------------------------------------------------------
+    # Async tasks with django-celery
+    #-----------------------------------------------------------------------------------
+
+    import djcelery
+    djcelery.setup_loader()
+
+    CELERY_RESULT_BACKEND = 'database'
+
+    BROKER_BACKEND = 'redis'
+    BROKER_HOST = 'localhost'
+    BROKER_PORT = 6379
+    BROKER_VHOST = '1'
+
+    REDIS_PORT=6379
+    REDIS_HOST='localhost'
+    REDIS_DB=2
+
+    #-----------------------------------------------------------------------------------
+    # Crontab Schedule
+    #-----------------------------------------------------------------------------------
+
+    from datetime import timedelta
+
+    CELERYBEAT_SCHEDULE = {
+         "runs-every-five-minutes": {
+             'task': 'rapidsms_httprouter.tasks.resend_errored_messages_task',
+             'schedule': timedelta(minutes=1),
+         },
+    }
+
+
 
 
