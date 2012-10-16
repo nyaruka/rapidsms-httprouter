@@ -12,6 +12,7 @@ from urllib import quote_plus
 from urllib2 import urlopen
 import time
 import re
+import datetime
 
 def fetch_url(url, params):
     """
