@@ -197,7 +197,7 @@ HttpRouter has two dependencies if you plan on using a ROUTER_URL and not just h
 
     REDIS_PORT=6379
     REDIS_HOST='localhost'
-    REDIS_DB=2
+    REDIS_DB=1
 
     #-----------------------------------------------------------------------------------
     # Crontab Schedule
