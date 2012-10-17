@@ -8,7 +8,7 @@ add issues as they occur so we have automated regression testing.
 """
 import time
 from django.test import TestCase, TransactionTestCase
-from .router import get_router, HttpRouterThread
+from .router import get_router, HttpRouter
 from .models import Message
 
 from rapidsms.models import Backend, Connection
@@ -16,6 +16,12 @@ from rapidsms.apps.base import AppBase
 from rapidsms.messages.outgoing import OutgoingMessage
 from django.conf import settings
 
+class TestResponse(object):
+    def getcode(self):
+        return 200
+
+    def read(self):
+        return "body"
 
 class BackendTest(TransactionTestCase):
 
@@ -26,6 +32,13 @@ class BackendTest(TransactionTestCase):
         (self.backend2, created) = Backend.objects.get_or_create(name="test_backend2")
         (self.connection2, created) = Connection.objects.get_or_create(backend=self.backend2, identity='2067799291')
         settings.SMS_APPS = []
+
+        settings.ROUTER_PASSWORD = None
+        settings.ROUTER_URL = None
+
+        # make celery tasks execute immediately (no redis)
+        settings.CELERY_ALWAYS_EAGER = True
+        settings.BROKER_BACKEND = 'memory'
 
     def tearDown(self):
         settings.ROUTER_URL = None
@@ -49,11 +62,11 @@ class BackendTest(TransactionTestCase):
         settings.ROUTER_URL = "http://mykannel.com/cgi-bin/sendsms?from=1234&text=%(text)s&to=%(recipient)s&smsc=%(backend)s&id=%(id)s"
 
         # monkey patch the router's fetch_url request
-        def test_fetch_url(self, url):
+        def test_fetch_url(cls, url, params):
             test_fetch_url.url = url
-            return 200
+            return TestResponse()
 
-        HttpRouterThread.fetch_url = test_fetch_url
+        HttpRouter.fetch_url = classmethod(test_fetch_url)
         router = get_router()
         msg1 = router.add_outgoing(self.connection, "test")
 
@@ -76,11 +89,11 @@ class BackendTest(TransactionTestCase):
         }
 
         # monkey patch the router's fetch_url request
-        def test_fetch_url(self, url):
+        def test_fetch_url(cls, url, params):
             test_fetch_url.url = url
-            return 200
+            return TestResponse()
 
-        HttpRouterThread.fetch_url = test_fetch_url
+        HttpRouter.fetch_url = classmethod(test_fetch_url)
         router = get_router()
 
         msg1 = router.add_outgoing(self.connection, "test")
@@ -119,6 +132,12 @@ class RouterTest(TestCase):
 
         # configure with bare minimum to run the http router
         settings.SMS_APPS = []
+        settings.ROUTER_PASSWORD = None
+        settings.ROUTER_URL = None
+
+        # make celery tasks execute immediately (no redis)
+        settings.CELERY_ALWAYS_EAGER = True
+        settings.BROKER_BACKEND = 'memory'
 
     def testAddMessage(self):
         router = get_router()
@@ -250,21 +269,18 @@ class RouterTest(TestCase):
         finally:
             router.apps = []
 
+# add an echo app
+class EchoApp(AppBase):
+    def handle(self, msg):
+        msg.respond("echo %s" % msg.text)
+        return True
 
 class ViewTest(TestCase):
 
     def setUp(self):
         (self.backend, created) = Backend.objects.get_or_create(name="test_backend")
         (self.connection, created) = Connection.objects.get_or_create(backend=self.backend, identity='2067799294')
-
-        # add an echo app
-        class EchoApp(AppBase):
-            def handle(self, msg):
-                msg.respond("echo %s" % msg.text)
-                return True
-
-        router = get_router()
-        router.apps.append(EchoApp(router))
+        settings.SMS_APPS = ['rapidsms_httprouter.tests.EchoApp']
 
     def tearDown(self):
         get_router().apps = []

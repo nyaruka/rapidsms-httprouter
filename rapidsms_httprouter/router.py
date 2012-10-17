@@ -14,18 +14,6 @@ import time
 import re
 import datetime
 
-def fetch_url(url, params):
-    """
-    Wrapper around url open, mostly here so we can monkey patch over it in unit tests, though
-    in some cases apps may monkey patch this to deal with secondary urls.
-    """
-    if getattr(settings, 'ROUTER_HTTP_METHOD', 'GET') == 'GET':
-        response = urlopen(url, timeout=15)
-    else:
-        response = urlopen(url, " ", timeout=15)
-
-    return response
-
 class HttpRouter(object, LoggerMixin):
     """
     This is a simplified version of the normal SMS router in that it has no threading.  Instead
@@ -41,6 +29,19 @@ class HttpRouter(object, LoggerMixin):
 
         # we need to be started
         self.started = False
+        
+    @classmethod
+    def fetch_url(cls, url, params):
+        """
+        Wrapper around url open, mostly here so we can monkey patch over it in unit tests, though
+        in some cases apps may monkey patch this to deal with secondary urls.
+        """
+        if getattr(settings, 'ROUTER_HTTP_METHOD', 'GET') == 'GET':
+            response = urlopen(url, timeout=15)
+        else:
+            response = urlopen(url, " ", timeout=15)
+
+        return response
 
     @classmethod
     def normalize_number(cls, number):
@@ -241,6 +242,18 @@ class HttpRouter(object, LoggerMixin):
 
         return send_msg
 
+    @classmethod
+    def class_from_string(cls, class_name):
+        """
+        Used to load a class object dynamically by name
+        """
+        parts = class_name.split('.')
+        module = ".".join(parts[:-1])
+        m = __import__(module)
+        for comp in parts[1:]:
+            m = getattr(m, comp)
+        return m
+
     def add_app(self, module_name):
         """
         Find the app named *module_name*, instantiate it, and add it to
@@ -249,12 +262,18 @@ class HttpRouter(object, LoggerMixin):
         """
         try:
             cls = AppBase.find(module_name)
-        except:
-            import traceback
-            traceback.print_exc()
-            cls = None
+        except Exception as e:
+            traceback.print_exc(e)
 
-        if cls is None:
+        # couldn't find the app, is it a class name instead?
+        if not cls:
+            try:
+                cls = HttpRouter.class_from_string(module_name)
+            except Exception as ee:
+                traceback.print_exc(ee)
+
+        # still no dice, warn the user
+        if not cls:
             self.error("Unable to find SMS application with module: '%s'" % module_name)
             return None
 

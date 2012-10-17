@@ -3,7 +3,7 @@ from celery.task import task
 from datetime import datetime, timedelta
 from django.conf import settings
 from .models import Message, DeliveryError
-from .router import fetch_url
+from .router import HttpRouter
 from urllib import quote_plus
 from urllib2 import urlopen
 import traceback
@@ -32,7 +32,7 @@ def build_send_url(params, **kwargs):
     # is this actually a dict?  if so, we want to look up the appropriate backend
     if type(router_url) is dict:
         router_dict = router_url
-        backend_name = msg.connection.backend.name
+        backend_name = params['backend']
             
         # is there an entry for this backend?
         if backend_name in router_dict:
@@ -72,7 +72,7 @@ def send_message(msg, **kwargs):
         print "[%d] - %s\n" % (msg.id, url)
         msg_log += "%s %s\n" % (msg.connection.backend.name, url)
 
-        response = fetch_url(url, params)
+        response = HttpRouter.fetch_url(url, params)
         status_code = response.getcode()
 
         body = response.read().decode('ascii', 'ignore').encode('ascii')
@@ -93,6 +93,8 @@ def send_message(msg, **kwargs):
         else:
             raise Exception("Received status code: %d" % status_code)
     except Exception as e:
+        import traceback
+        traceback.print_exc(e)
         print "  [%d] - send error - %s" % (msg.id, str(e))
 
         # previous errors

@@ -59,7 +59,8 @@ def receive(request):
 
     # otherwise, create the message
     data = form.cleaned_data
-    message = get_router().handle_incoming(data['backend'], data['sender'], data['message'])
+    router = get_router()
+    message = router.handle_incoming(data['backend'], data['sender'], data['message'])
 
     response = {}
     response['message'] = message.as_json()
