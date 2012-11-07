@@ -264,6 +264,7 @@ class HttpRouter(object, LoggerMixin):
         try:
             cls = AppBase.find(module_name)
         except Exception as e:
+            cls = None
             traceback.print_exc(e)
 
         # couldn't find the app, is it a class name instead?
