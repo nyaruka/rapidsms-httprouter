@@ -30,7 +30,7 @@ class HttpRouter(object, LoggerMixin):
 
         # we need to be started
         self.started = False
-        
+
     @classmethod
     def fetch_url(cls, url, params):
         """
@@ -41,7 +41,7 @@ class HttpRouter(object, LoggerMixin):
             response = urlopen(url, timeout=15)
         else:
             response = urlopen(url, " ", timeout=15)
-
+        
         return response
 
     @classmethod
@@ -244,7 +244,7 @@ class HttpRouter(object, LoggerMixin):
         return send_msg
 
     @classmethod
-    def class_from_string(cls, class_name):
+    def definition_from_string(cls, class_name):
         """
         Used to load a class object dynamically by name
         """
@@ -270,7 +270,7 @@ class HttpRouter(object, LoggerMixin):
         # couldn't find the app, is it a class name instead?
         if not cls:
             try:
-                cls = HttpRouter.class_from_string(module_name)
+                cls = HttpRouter.definition_from_string(module_name)
             except Exception as ee:
                 traceback.print_exc(ee)
 

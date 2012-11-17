@@ -14,6 +14,13 @@ import redis
 import logging
 logger = logging.getLogger(__name__)
 
+def fetch_url(url, params):
+    if hasattr(settings, 'ROUTER_FETCH_URL'):
+        fetch_url = HttpRouter.definition_from_string(getattr(settings, 'ROUTER_FETCH_URL'))
+        return fetch_url(url, params)
+    else:
+        return HttpRouter.fetch_url(url, params)
+
 def build_send_url(params, **kwargs):
     """
     Constructs an appropriate send url for the given message.
@@ -72,7 +79,7 @@ def send_message(msg, **kwargs):
         print "[%d] - %s\n" % (msg.id, url)
         msg_log += "%s %s\n" % (msg.connection.backend.name, url)
 
-        response = HttpRouter.fetch_url(url, params)
+        response = fetch_url(url, params)
         status_code = response.getcode()
 
         body = response.read().decode('ascii', 'ignore').encode('ascii')
