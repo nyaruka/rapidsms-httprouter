@@ -137,7 +137,7 @@ def send_message_task(message_id):  #pragma: no cover
         msg = Message.objects.get(pk=message_id)
 
         # if it hasn't been sent and it needs to be sent
-        if msg.status == 'Q':
+        if msg.status == 'Q' or msg.status == 'E':
             body = send_message(msg)
 
 @task(track_started=True)
@@ -157,13 +157,28 @@ def resend_errored_messages_task():  #pragma: no cover
         pending = Message.objects.filter(direction='O', status__in=('E'))
 
         # send each
+        count = 0
         for msg in pending:
             msg.send()
+            count+=1
+
+            if count >= 100: break
+
+        print "-- resent %d errored messages --" % count
 
         # and all queued messages that are older than 5 mins
         five_minutes_ago = datetime.now() - timedelta(minutes=5)
         pending = Message.objects.filter(direction='O', status__in=('Q'), updated__lte=five_minutes_ago)
 
+
         # send each
+        count = 0
         for msg in pending:
             msg.send()
+            count+=1
+
+            if count >= 100: break
+
+        print "-- resent %d pending messages -- " % count
+
+
