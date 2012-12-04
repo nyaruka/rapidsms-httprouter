@@ -63,8 +63,14 @@ class HttpRouter(object, LoggerMixin):
         backend, created = Backend.objects.get_or_create(name=backend)
         contact = HttpRouter.normalize_number(contact)
 
-        # create our connection
-        connection, created = Connection.objects.get_or_create(backend=backend, identity=contact)
+        # try to find a connection
+        connection = Connection.objects.filter(backend=backend, identity=contact)
+
+        # if not found, create it
+        if not connection:
+            connection = Connection.objects.create(backend=backend, identity=contact)
+        else:
+            connection = connection[0]
 
         # force to unicode
         text = unicode(text)
