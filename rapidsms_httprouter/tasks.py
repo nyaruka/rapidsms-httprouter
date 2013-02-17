@@ -100,8 +100,6 @@ def send_message(msg, **kwargs):
         else:
             raise Exception("Received status code: %d" % status_code)
     except Exception as e:
-        import traceback
-        traceback.print_exc(e)
         print "  [%d] - send error - %s" % (msg.id, str(e))
 
         # previous errors
@@ -131,14 +129,22 @@ def send_message_task(message_id):  #pragma: no cover
     # we use redis to acquire a global lock based on our settings key
     r = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB)
 
-    # try to acquire a lock, at most it will last 60 seconds
-    with r.lock('send_message_%d' % message_id, timeout=60):
-        # get the message
-        msg = Message.objects.get(pk=message_id)
+    try:
+        print "  [%d] - acquiring lock" % message_id
 
-        # if it hasn't been sent and it needs to be sent
-        if msg.status == 'Q' or msg.status == 'E':
-            body = send_message(msg)
+        # try to acquire a lock, at most it will last 60 seconds
+        with r.lock('send_message_%d' % message_id, timeout=60):
+            # get the message
+            msg = Message.objects.get(pk=message_id)
+            print "  [%d] - sending message" % message_id
+
+            # if it hasn't been sent and it needs to be sent
+            if msg.status == 'Q' or msg.status == 'E':
+                body = send_message(msg)
+                print "  [%d] - msg sent status: %s" % (message_id, msg.status)
+
+    finally:
+        print "  [%d] - task ended" % message_id
 
 @task(track_started=True)
 def resend_errored_messages_task():  #pragma: no cover
@@ -162,14 +168,13 @@ def resend_errored_messages_task():  #pragma: no cover
             msg.send()
             count+=1
 
-            if count >= 100: break
+            if count >= 25: break
 
         print "-- resent %d errored messages --" % count
 
-        # and all queued messages that are older than 5 mins
-        five_minutes_ago = datetime.now() - timedelta(minutes=5)
+        # and all queued messages that are older than 1 minute
+        five_minutes_ago = datetime.now() - timedelta(minutes=1)
         pending = Message.objects.filter(direction='O', status__in=('Q'), updated__lte=five_minutes_ago)
-
 
         # send each
         count = 0
@@ -177,7 +182,7 @@ def resend_errored_messages_task():  #pragma: no cover
             msg.send()
             count+=1
 
-            if count >= 100: break
+            if count >= 25: break
 
         print "-- resent %d pending messages -- " % count
 
