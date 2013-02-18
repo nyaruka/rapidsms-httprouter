@@ -165,7 +165,7 @@ def resend_errored_messages_task():  #pragma: no cover
         # send each
         count = 0
         for msg in pending:
-            msg.send()
+            send_message_task(msg.pk)
             count+=1
 
             if count >= 25: break
@@ -179,7 +179,7 @@ def resend_errored_messages_task():  #pragma: no cover
         # send each
         count = 0
         for msg in pending:
-            msg.send()
+            send_message_task(msg.pk)
             count+=1
 
             if count >= 25: break
