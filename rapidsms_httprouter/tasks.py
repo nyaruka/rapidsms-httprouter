@@ -124,35 +124,30 @@ def send_message(msg, **kwargs):
 def send_message_task(message_id):  #pragma: no cover
     # noop if there is no ROUTER_URL
     if not getattr(settings, 'ROUTER_URL', None):
-        return
+        print "  [%d] - no ROUTER_URL configured, ignoring" % message_id
 
     # we use redis to acquire a global lock based on our settings key
     r = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB)
 
-    try:
-        print "  [%d] - acquiring lock" % message_id
+    # try to acquire a lock, at most it will last 60 seconds
+    with r.lock('send_message_%d' % message_id, timeout=60):
+        print "  [%d] - sending message" % message_id
 
-        # try to acquire a lock, at most it will last 60 seconds
-        with r.lock('send_message_%d' % message_id, timeout=60):
-            # get the message
-            msg = Message.objects.get(pk=message_id)
-            print "  [%d] - sending message" % message_id
+        # get the message
+        msg = Message.objects.get(pk=message_id)
 
-            # if it hasn't been sent and it needs to be sent
-            if msg.status == 'Q' or msg.status == 'E':
-                body = send_message(msg)
-                print "  [%d] - msg sent status: %s" % (message_id, msg.status)
-
-    finally:
-        print "  [%d] - task ended" % message_id
+        # if it hasn't been sent and it needs to be sent
+        if msg.status == 'Q' or msg.status == 'E':
+            body = send_message(msg)
+            print "  [%d] - msg sent status: %s" % (message_id, msg.status)
 
 @task(track_started=True)
 def resend_errored_messages_task():  #pragma: no cover
     # noop if there is no ROUTER_URL
     if not getattr(settings, 'ROUTER_URL', None):
-        return
+        print "--resending errors-- no ROUTER_URL configured, ignoring"
 
-    print "[[resending errored messages]]"
+    print "-- resending errors --"
 
     # we use redis to acquire a global lock based on our settings key
     r = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT, db=settings.REDIS_DB)
@@ -165,24 +160,24 @@ def resend_errored_messages_task():  #pragma: no cover
         # send each
         count = 0
         for msg in pending:
-            send_message_task(msg.pk)
+            msg.send()
             count+=1
 
-            if count >= 25: break
+            if count >= 100: break
 
         print "-- resent %d errored messages --" % count
 
-        # and all queued messages that are older than 1 minute
-        one_minute_ago = datetime.now() - timedelta(minutes=1)
-        pending = Message.objects.filter(direction='O', status__in=('Q'), updated__lte=one_minute_ago)
+        # and all queued messages that are older than 2 minutes
+        two_minutes_ago = datetime.now() - timedelta(minutes=2)
+        pending = Message.objects.filter(direction='O', status__in=('Q'), updated__lte=two_minutes_ago)
 
         # send each
         count = 0
         for msg in pending:
-            send_message_task(msg.pk)
+            msg.send()
             count+=1
 
-            if count >= 25: break
+            if count >= 100: break
 
         print "-- resent %d pending messages -- " % count
 
