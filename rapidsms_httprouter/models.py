@@ -5,23 +5,45 @@ from django.db.models.query import QuerySet
 
 from rapidsms.models import Contact, Connection
 
+
+# Direction constants
+INCOMING = 'I'
+OUTGOING = 'O'
+
+# Status constants
+RECEIVED = 'R'
+HANDLED = 'H'
+
+PROCESSING = 'P'
+LOCKED = 'L'
+
+QUEUED = 'Q'
+DISPATCHED = 'I'
+SENT = 'S'
+DELIVERED = 'D'
+
+CANCELLED = 'C'
+ERRORED = 'E'
+FAILED = 'F'
+
 DIRECTION_CHOICES = (
-    ('I', "Incoming"),
-    ('O', "Outgoing"))
+    (INCOMING, "Incoming"),
+    (OUTGOING, "Outgoing"))
 
 STATUS_CHOICES = (
-    ('R', "Received"),
-    ('H', "Handled"),
+    (RECEIVED, "Received"),
+    (HANDLED, "Handled"),
 
-    ('P', "Processing"),
-    ('L', "Locked"),
+    (PROCESSING, "Processing"),
+    (LOCKED, "Locked"),
 
-    ('Q', "Queued"),
-    ('S', "Sent"),
-    ('D', "Delivered"),
+    (QUEUED, "Queued"),
+    (SENT, "Sent"),
+    (DELIVERED, "Delivered"),
 
-    ('C', "Cancelled"),
-    ('E', "Errored")
+    (CANCELLED, "Cancelled"),
+    (ERRORED, "Errored"),
+    (FAILED, "Failed")
 )
 
 class Message(models.Model):
@@ -38,6 +60,9 @@ class Message(models.Model):
     delivered  = models.DateTimeField(null=True, blank=True)
 
     in_response_to = models.ForeignKey('self', related_name='responses', null=True, blank=True)
+
+    external_id = models.CharField(max_length=64, null=True, blank=True,
+                                   help_text="An arbitrary id which you can use to map ids assigned by an external backend to your local messages")
 
     def __unicode__(self):
         # crop the text (to avoid exploding the admin)

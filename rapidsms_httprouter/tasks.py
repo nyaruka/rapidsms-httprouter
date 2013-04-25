@@ -2,8 +2,6 @@ import StringIO
 from celery.task import task
 from datetime import datetime, timedelta
 from django.conf import settings
-from .models import Message, DeliveryError
-from .router import HttpRouter
 from urllib import quote_plus
 from urllib2 import urlopen
 import traceback
@@ -13,6 +11,10 @@ import redis
 
 import logging
 logger = logging.getLogger(__name__)
+
+from .models import Message, DeliveryError, QUEUED, ERRORED, DISPATCHED, SENT, FAILED, OUTGOING, INCOMING
+from .router import HttpRouter
+from .textit import lookup_textit_backend_by_name, send_textit_message
 
 def fetch_url(url, params):
     if hasattr(settings, 'ROUTER_FETCH_URL'):
@@ -66,39 +68,58 @@ def send_message(msg, **kwargs):
 
     print "[%d] >> %s\n" % (msg.id, msg.text)
 
-    # and actually hand the message off to our router URL
     try:
-        params = {
-            'backend': msg.connection.backend.name,
-            'recipient': msg.connection.identity,
-            'text': msg.text,
-            'id': msg.pk
-        }
+        # if this is a textit backend
+        textit_backend = lookup_textit_backend_by_name(msg.connection.backend.name)
+        if textit_backend:
+            # deliver there
+            ids = send_textit_message(msg.connection.backend.name, [msg.connection.identity], msg.text)
+            
+            # TODO: bulk messaging?
+            if ids:
+                msg.external_id = ids[0]
+                msg.status = DISPATCHED
+                msg.save()
+                return 200
+            else:
+                # no ids back is almost certainly an error, we'll retry later
+                raise Exception("Did not receive send ids from TextIt, will retry.")
 
-        url = build_send_url(params)
-        print "[%d] - %s\n" % (msg.id, url)
-        msg_log += "%s %s\n" % (msg.connection.backend.name, url)
-
-        response = fetch_url(url, params)
-        status_code = response.getcode()
-
-        body = response.read().decode('ascii', 'ignore').encode('ascii')
-
-        msg_log += "Status Code: %d\n" % status_code
-        msg_log += "Body: %s\n" % body
-
-        # kannel likes to send 202 responses, really any
-        # 2xx value means things went okay
-        if int(status_code/100) == 2:
-            print "  [%d] - sent %d" % (msg.id, status_code)
-            logger.info("SMS[%d] SENT" % msg.id)
-            msg.sent = datetime.now()
-            msg.status = 'S'
-            msg.save()
-
-            return body
+        # otherwise, deliver as normal using our ROUTER_URL
         else:
-            raise Exception("Received status code: %d" % status_code)
+            # and actually hand the message off to our router URL
+            params = {
+                'backend': msg.connection.backend.name,
+                'recipient': msg.connection.identity,
+                'text': msg.text,
+                'id': msg.pk
+            }
+
+            url = build_send_url(params)
+            print "[%d] - %s\n" % (msg.id, url)
+            msg_log += "%s %s\n" % (msg.connection.backend.name, url)
+            
+            response = fetch_url(url, params)
+            status_code = response.getcode()
+
+            body = response.read().decode('ascii', 'ignore').encode('ascii')
+
+            msg_log += "Status Code: %d\n" % status_code
+            msg_log += "Body: %s\n" % body
+
+            # kannel likes to send 202 responses, really any
+            # 2xx value means things went okay
+            if int(status_code/100) == 2:
+                print "  [%d] - sent %d" % (msg.id, status_code)
+                logger.info("SMS[%d] SENT" % msg.id)
+                msg.sent = datetime.now()
+                msg.status = SENT
+                msg.save()
+
+                return status_code
+            else:
+                raise Exception("Received status code: %d" % status_code)
+
     except Exception as e:
         print "  [%d] - send error - %s" % (msg.id, str(e))
 
@@ -109,11 +130,11 @@ def send_message(msg, **kwargs):
         
         if previous_count >= 2:
             msg_log += "Permanent failure, will not retry."
-            msg.status = 'F'
+            msg.status = FAILED
             msg.save()
         else:
             msg_log += "Will retry %d more time(s)." % (2 - previous_count)
-            msg.status = 'E'
+            msg.status = ERRORED
             msg.save()
 
         DeliveryError.objects.create(message=msg, log=msg_log)
@@ -137,9 +158,9 @@ def send_message_task(message_id):  #pragma: no cover
         msg = Message.objects.get(pk=message_id)
 
         # if it hasn't been sent and it needs to be sent
-        if msg.status == 'Q' or msg.status == 'E':
-            body = send_message(msg)
-            print "  [%d] - msg sent status: %s" % (message_id, msg.status)
+        if msg.status == QUEUED or msg.status == ERRORED:
+            status = send_message(msg)
+            print "  [%d] - msg sent status: %s" % (message_id, status)
 
 @task(track_started=True)
 def resend_errored_messages_task():  #pragma: no cover
@@ -155,7 +176,7 @@ def resend_errored_messages_task():  #pragma: no cover
     # try to acquire a lock, at most it will last 5 mins
     with r.lock('resend_messages', timeout=300):
         # get all errored outgoing messages
-        pending = Message.objects.filter(direction='O', status__in=('E'))
+        pending = Message.objects.filter(direction=OUTGOING, status__in=(ERRORED))
 
         # send each
         count = 0
@@ -169,7 +190,7 @@ def resend_errored_messages_task():  #pragma: no cover
 
         # and all queued messages that are older than 2 minutes
         two_minutes_ago = datetime.now() - timedelta(minutes=2)
-        pending = Message.objects.filter(direction='O', status__in=('Q'), updated__lte=two_minutes_ago)
+        pending = Message.objects.filter(direction=OUTGOING, status__in=(QUEUED), updated__lte=two_minutes_ago)
 
         # send each
         count = 0

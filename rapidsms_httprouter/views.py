@@ -19,7 +19,6 @@ from django.core.mail import send_mail
 from .models import Message
 from .router import get_router
 
-
 class SecureForm(forms.Form):
     """
     Abstracts out requirement of a password.  If you have a password set
@@ -181,7 +180,6 @@ class ReplyForm(forms.Form):
 
 class SearchForm(forms.Form):
     search = forms.CharField(label="Keywords", max_length=100, widget=forms.TextInput(attrs={'size': '60'}), required=False)
-
 
 def console(request):
     """

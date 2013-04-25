@@ -3,6 +3,7 @@
 
 from django.conf.urls.defaults import *
 from .views import receive, outbox, delivered, console, relaylog, alert
+from .textit import textit_webhook
 from django.contrib.admin.views.decorators import staff_member_required
 
 urlpatterns = patterns("",
@@ -11,5 +12,6 @@ urlpatterns = patterns("",
    ("^router/relaylog", relaylog),
    ("^router/alert", alert),
    ("^router/delivered", delivered),
-   ("^router/console", staff_member_required(console), {}, 'httprouter-console')
+   ("^router/console", staff_member_required(console), {}, 'httprouter-console'),
+   ("^router/textit", textit_webhook),
 )
