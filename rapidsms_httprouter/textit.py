@@ -15,6 +15,9 @@ def parse_textit_router_url(router_url):
     Router URLs take the form:
       http://250788383383:dcfaa3ae960e3205bc4dc04c2ebefe1df22c7a2f@textit.in/api/v1
     """
+    if not router_url:
+        return None
+
     textit_offset = router_url.find('@textit.in')
 
     if textit_offset > 0:
@@ -87,7 +90,7 @@ def textit_webhook(request):
     if config_password:
         request_password = request.REQUEST.get('password', None)
         if request_password != config_password:
-            raise Exception("Invalid password: '%s'" % request_password)
+            return HttpResponse("Invalid password.", status=400)
 
     if request.method == 'POST':
         event = request.POST.get('event', None)
@@ -99,7 +102,7 @@ def textit_webhook(request):
             # raise an exception if this doesn't look like a valid request to us
             if not form.is_valid():
                 errors = "\n".join("%s: %s" % (_, ",".join(form.errors[_])) for _ in form.errors.keys())
-                raise Exception("Invalid form, cannot process.\n\nErrors:\n\n%s" % errors)                
+                return HttpResponse("Invalid form, cannot process.\n\nErrors:\n\n%s" % errors, status=400)
 
             data = form.cleaned_data
             event = data['event']
@@ -134,7 +137,7 @@ def textit_webhook(request):
 
             # this is a delivery report
             elif event == 'mt_dlvd':
-                message = Message.objects.filter(server_id=data['sms'])
+                message = Message.objects.filter(external_id=data['sms'])
 
                 # we only care about messages we actually know about
                 if message:
@@ -146,7 +149,7 @@ def textit_webhook(request):
 
             # the message did not send, this is a failure
             elif event == 'mt_fail':
-                message = Message.objects.filter(server_id=data['sms'])
+                message = Message.objects.filter(external_id=data['sms'])
 
                 # we only care about messages we actually know about
                 if message:
@@ -160,8 +163,8 @@ def textit_webhook(request):
             json_response['status'] = "ignoring event"
 
     else:
-        raise Exception("Invalid method, must be POST")
-                
+        return HttpResponse("Invalid method, must be POST", status=400)
+
     # build our response from our JSON
     http_response = HttpResponse(json.dumps(json_response))
 
