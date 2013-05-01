@@ -66,17 +66,23 @@ def lookup_textit_backend_by_phone(phone):
     return textit_backend
 
 
+
+
 def lookup_textit_backend_by_name(name):
     """
     Looks through our ROUTER_URL parameters for the backend that matches the passed in name.
     If not found, returns None.
     """
     if name in __backends_by_name: return __backends_by_name[name]
+    router_url = settings.ROUTER_URL
 
-    router_url = settings.ROUTER_URL.get(name, None)
+    if isinstance(router_url, dict):
+        router_url = settings.ROUTER_URL.get(name, None)
+
     if router_url:
-        textit_backend = parse_textit_router_url(router_url)
-        textit_backend['name'] = name
+	textit_backend = parse_textit_router_url(router_url)
+        if textit_backend:
+            textit_backend['name'] = name
 
     __backends_by_name[name] = textit_backend
     return textit_backend
