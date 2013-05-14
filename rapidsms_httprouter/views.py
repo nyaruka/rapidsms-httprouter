@@ -7,6 +7,7 @@ from django.shortcuts import render_to_response
 from django.conf import settings
 from django.db.models import Q
 from django.core.paginator import *
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from rapidsms.messages.outgoing import OutgoingMessage
@@ -15,6 +16,7 @@ from djtables import Table, Column
 from djtables.column import DateColumn
 
 from django.core.mail import send_mail
+import datetime
 
 from .models import Message
 from .router import get_router
@@ -180,6 +182,16 @@ class ReplyForm(forms.Form):
 
 class SearchForm(forms.Form):
     search = forms.CharField(label="Keywords", max_length=100, widget=forms.TextInput(attrs={'size': '60'}), required=False)
+
+def status(request):
+    """
+    Simple view suitable for automated monitoring, will output how many messages have been pending to send for a
+    while.
+    """
+    fifteen_minutes_ago = timezone.now() - datetime.timedelta(minutes=15)
+    pending_count = Message.objects.filter(status='Q', date__lte=fifteen_minutes_ago).count()
+
+    return render_to_response("router/status.html", dict(pending_count=pending_count),context_instance=RequestContext(request))
 
 def console(request):
     """
