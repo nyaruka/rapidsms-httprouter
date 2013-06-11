@@ -52,6 +52,8 @@ def lookup_textit_backend_by_phone(phone):
 
     if phone in __backends_by_phone: return __backends_by_phone[phone]
 
+    textit_backend = None
+
     # look through our router urls
     for backend in settings.ROUTER_URL.keys():
         router_url = settings.ROUTER_URL[backend]
