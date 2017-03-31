@@ -13,7 +13,7 @@ import json
 def parse_textit_router_url(router_url):
     """
     Router URLs take the form:
-      http://250788383383:dcfaa3ae960e3205bc4dc04c2ebefe1df22c7a2f@textit.in/api/v1
+      http://250788383383:dcfaa3ae960e3205bc4dc04c2ebefe1df22c7a2f@textit.in/api/v2
     """
     if not router_url:
         return None
@@ -26,7 +26,7 @@ def parse_textit_router_url(router_url):
 
         if not parsed.username or not parsed.password:
             raise Exception("Invalid configuration for TextIt endpoint, must be in the format: "\
-                            "'http://[phone]:[api_token]@textit.in/api/v1' was '%s'" % router_url)
+                            "'http://[phone]:[api_token]@textit.in/api/v2' was '%s'" % router_url)
 
         # strip the + for consistency.. most will probably forget to URL encode it anyways
         phone = parsed.username.strip('+ ')
@@ -82,7 +82,7 @@ def lookup_textit_backend_by_name(name):
         router_url = settings.ROUTER_URL.get(name, None)
 
     if router_url:
-	textit_backend = parse_textit_router_url(router_url)
+        textit_backend = parse_textit_router_url(router_url)
         if textit_backend:
             textit_backend['name'] = name
 
@@ -201,7 +201,7 @@ class TextItSMSForm(forms.Form):
     time = forms.DateTimeField(required=True, input_formats=["%Y-%m-%dT%H:%M:%S.%f"])
 
 
-TEXTIT_SEND_URL = 'https://api.textit.in/api/v1/sms.json'
+TEXTIT_SEND_URL = 'https://api.textit.in/api/v2/broadcast.json'
 
 
 def send_textit_message(backend, contacts, message):
@@ -214,16 +214,18 @@ def send_textit_message(backend, contacts, message):
     textit_backend = lookup_textit_backend_by_name(backend)
     if not textit_backend:
         raise Exception("Unable to find a TextIt backend with name '%s', check ROUTER_URL in your settings.py" % backend)
-    
+
+    urns = ['tel:%s' % contact for contact in contacts]
+
     # build our request
-    payload = dict(text=message, phone=contacts)
-    headers = { 'Authorization': 'Token %s' % textit_backend['token'],
-                'Content-Type': 'application/json' }
+    payload = dict(text=message, urns=urns)
+    headers = {'Authorization': 'Token %s' % textit_backend['token'],
+               'Content-Type': 'application/json'}
 
     # send things off, raising an exception if we don't get a 200
     r = requests.post(TEXTIT_SEND_URL, data=json.dumps(payload), headers=headers)
     r.raise_for_status()
 
-    # return the message ids that were created on the TextIt side
+    # return the broadcast id that were created on the TextIt side
     json_response = r.json()
-    return json_response.get("sms")
+    return json_response.get("id")
