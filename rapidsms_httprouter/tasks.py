@@ -73,11 +73,11 @@ def send_message(msg, **kwargs):
         textit_backend = lookup_textit_backend_by_name(msg.connection.backend.name)
         if textit_backend:
             # deliver there
-            ids = send_textit_message(msg.connection.backend.name, [msg.connection.identity], msg.text)
+            broadcast_id = send_textit_message(msg.connection.backend.name, [msg.connection.identity], msg.text)
             
             # TODO: bulk messaging?
-            if ids:
-                msg.external_id = ids[0]
+            if broadcast_id:
+                msg.external_id = broadcast_id
                 msg.status = DISPATCHED
                 msg.save()
                 return 200
